@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:animations/animations.dart';
 import 'firebase_options.dart';
-import 'theme/app_theme.dart';
+import 'theme/theme_provider.dart';
 import 'models/enums.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
@@ -34,10 +34,10 @@ void main() async {
 
   // System UI overlay will be updated after the first frame using app theme
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    final scheme = appTheme.colorScheme;
+    final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFFD9B88A));
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
-        statusBarColor: scheme.background,
+        statusBarColor: scheme.surface,
         statusBarIconBrightness: scheme.brightness == Brightness.dark
             ? Brightness.light
             : Brightness.dark,
@@ -56,14 +56,17 @@ void main() async {
   );
 }
 
-class UACCApp extends StatelessWidget {
+class UACCApp extends ConsumerWidget {
   const UACCApp({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentTheme = ref.watch(themeProvider);
+    final theme = AppThemes.getTheme(currentTheme);
+
     return MaterialApp(
       title: 'UACC - Universal AI Call Companion',
-      theme: appTheme,
+      theme: theme,
       debugShowCheckedModeBanner: false,
       home: const AppInitializer(),
       onGenerateRoute: (settings) {

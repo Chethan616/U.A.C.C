@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_state_service.dart';
 
 class AuthService {
@@ -243,3 +244,20 @@ class AuthService {
   // Get user ID
   String? get userId => _auth.currentUser?.uid;
 }
+
+// Riverpod providers
+final authServiceProvider = Provider<AuthService>((ref) => AuthService());
+
+final currentUserProvider = StreamProvider<User?>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  return authService.authStateChanges;
+});
+
+final isSignedInProvider = Provider<bool>((ref) {
+  final user = ref.watch(currentUserProvider);
+  return user.when(
+    data: (user) => user != null,
+    loading: () => false,
+    error: (_, __) => false,
+  );
+});

@@ -1,13 +1,15 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_provider.dart';
 import '../models/enums.dart';
+import '../services/auth_service.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/upcoming_events_carousel.dart';
-import '../utils/performant_animations.dart';
-import '../widgets/expressive_icons.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -20,8 +22,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _selectedIndex = 0;
   late AnimationController _animationController;
   late AnimationController _fabController;
-  late AnimationController _pageController;
-  late PageController _pageViewController;
 
   final List<Widget> _screens = [
     const DashboardTab(),
@@ -70,25 +70,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _pageController = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-    _pageViewController = PageController(initialPage: 0);
     _animationController.forward();
     _fabController.forward();
-    // Ensure the initial page transition animation runs so the first tab
-    // is visible on first open. Without this the FadeTransition/SlideTransition
-    // driven by _pageController remains at 0.0 opacity until a nav action.
-    _pageController.forward();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _fabController.dispose();
-    _pageController.dispose();
-    _pageViewController.dispose();
     super.dispose();
   }
 
@@ -96,34 +85,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFEF1E1), // Updated to requested color
-      body: PageView.builder(
-        controller: _pageViewController,
-        itemCount: _screens.length,
-        onPageChanged: (index) {
-          // Prevent page change from PageView gesture, only allow from bottom nav
-        },
-        physics: const NeverScrollableScrollPhysics(),
-        itemBuilder: (context, index) {
-          return FadeTransition(
-            opacity: Tween<double>(
-              begin: 0.0,
-              end: 1.0,
-            ).animate(CurvedAnimation(
-              parent: _pageController,
-              curve: Curves.easeInOutCubic,
-            )),
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: Offset(index < _selectedIndex ? -0.3 : 0.3, 0.0),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: _pageController,
-                curve: Curves.easeInOutCubic,
-              )),
-              child: _screens[index],
-            ),
-          );
-        },
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
       ),
       floatingActionButton: _selectedIndex == 0
           ? ScaleTransition(
@@ -167,16 +131,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 setState(() {
                   _selectedIndex = index;
                 });
-
-                // Reset and restart page animation for smooth transitions
-                _pageController.reset();
-                _pageController.forward();
-
-                _pageViewController.animateToPage(
-                  index,
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOutCubic,
-                );
 
                 // Handle FAB visibility
                 if (index == 0) {
@@ -751,17 +705,15 @@ class _DashboardTabState extends State<DashboardTab>
                     child: () {
                       switch (iconType) {
                         case 'phone':
-                          return ExpressiveIcons.phone(
-                              size: 24.0, color: color, filled: true);
+                          return Icon(Icons.phone, size: 24.0, color: color);
                         case 'notifications':
-                          return ExpressiveIcons.notifications(
-                              size: 24.0, color: color, filled: true);
+                          return Icon(Icons.notifications,
+                              size: 24.0, color: color);
                         case 'tasks':
-                          return ExpressiveIcons.tasks(
-                              size: 24.0, color: color, filled: true);
+                          return Icon(Icons.task_alt, size: 24.0, color: color);
                         default:
-                          return ExpressiveIcons.dashboard(
-                              size: 24.0, color: color, filled: true);
+                          return Icon(Icons.dashboard,
+                              size: 24.0, color: color);
                       }
                     }(),
                   ),
@@ -889,11 +841,7 @@ class CallsTab extends StatelessWidget {
                 Expanded(
                   child: FilledButton.tonalIcon(
                     onPressed: () {},
-                    icon: ExpressiveIcons.phone(
-                      size: 20,
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
-                      filled: true,
-                    ),
+                    icon: const Icon(Icons.phone, size: 20),
                     label: const Text('Recent'),
                   ),
                 ),
@@ -982,10 +930,10 @@ class CallsTab extends StatelessWidget {
             ),
             IconButton(
               onPressed: () {},
-              icon: ExpressiveIcons.phone(
+              icon: Icon(
+                Icons.phone,
                 size: 18,
                 color: Theme.of(context).colorScheme.primary,
-                filled: true,
               ),
             ),
           ],
@@ -1028,11 +976,7 @@ class NotificationsTab extends StatelessWidget {
                 Expanded(
                   child: FilledButton.tonalIcon(
                     onPressed: () {},
-                    icon: ExpressiveIcons.notifications(
-                      size: 20,
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
-                      filled: true,
-                    ),
+                    icon: const Icon(Icons.notifications, size: 20),
                     label: const Text('All'),
                   ),
                 ),
@@ -1104,10 +1048,10 @@ class NotificationsTab extends StatelessWidget {
             color: priorityColor.withOpacity(0.2),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: ExpressiveIcons.notifications(
+          child: Icon(
+            Icons.notifications,
             size: 20,
             color: priorityColor,
-            filled: true,
           ),
         ),
         title: Text(
@@ -1191,10 +1135,10 @@ class TasksTab extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        ExpressiveIcons.tasks(
+                        Icon(
+                          Icons.task_alt,
                           size: 24,
                           color: Theme.of(context).colorScheme.primary,
-                          filled: true,
                         ),
                         const SizedBox(width: 12),
                         Text(
@@ -1387,243 +1331,279 @@ class TasksTab extends StatelessWidget {
   }
 }
 
-class ProfileTab extends StatelessWidget {
+class ProfileTab extends ConsumerWidget {
   const ProfileTab({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          foregroundColor: Theme.of(context).colorScheme.onSurface,
-          elevation: 0,
-          floating: true,
-          snap: true,
-          title: const Text('Profile'),
-          actions: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.edit),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(currentUserProvider);
+
+    return userAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Theme.of(context).colorScheme.error,
             ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.more_vert),
+            const SizedBox(height: 16),
+            Text('Error loading profile'),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => ref.invalidate(currentUserProvider),
+              child: const Text('Retry'),
             ),
           ],
         ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
+      ),
+      data: (user) => CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+            elevation: 0,
+            floating: true,
+            snap: true,
+            title: const Text('Profile'),
+            actions: [
+              IconButton(
+                onPressed: () {
+                  _showEditProfile(context, ref);
+                },
+                icon: const Icon(Icons.edit),
+              ),
+              IconButton(
+                onPressed: () {
+                  _showMoreOptions(context, ref);
+                },
+                icon: const Icon(Icons.more_vert),
+              ),
+            ],
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundImage: user?.photoURL != null
+                                ? NetworkImage(user!.photoURL!)
+                                : null,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            child: user?.photoURL == null
+                                ? Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer,
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.surface,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.camera_alt,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        user?.displayName ?? 'No name',
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                      ),
+                      Text(
+                        user?.email ?? 'No email',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Online',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Card(
                 child: Column(
                   children: [
-                    Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                          child: ExpressiveIcons.person(
-                            size: 60,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer,
-                            filled: true,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.surface,
-                                width: 2,
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.camera_alt,
-                              size: 16,
-                              color: Theme.of(context).colorScheme.onPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
+                    _buildProfileItem(
+                      context,
+                      Icons.email_outlined,
+                      'Email',
+                      user?.email ?? 'Not provided',
+                      () {},
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'John Doe',
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                    _buildProfileItem(
+                      context,
+                      Icons.person_outline,
+                      'Display Name',
+                      user?.displayName ?? 'Not set',
+                      () {},
                     ),
-                    Text(
-                      'Software Engineer',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                    _buildProfileItem(
+                      context,
+                      Icons.verified_user_outlined,
+                      'Email Verified',
+                      user?.emailVerified == true ? 'Yes' : 'No',
+                      () {},
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Online',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    _buildProfileItem(
+                      context,
+                      Icons.access_time_outlined,
+                      'Member Since',
+                      user?.metadata.creationTime != null
+                          ? _formatDate(user!.metadata.creationTime!)
+                          : 'Unknown',
+                      () {},
                     ),
                   ],
                 ),
               ),
             ),
           ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Card(
-              child: Column(
-                children: [
-                  _buildProfileItem(
-                    context,
-                    Icons.email_outlined,
-                    'Email',
-                    'john.doe@company.com',
-                    () {},
-                  ),
-                  _buildProfileItem(
-                    context,
-                    Icons.phone_outlined,
-                    'Phone',
-                    '+1 (555) 123-4567',
-                    () {},
-                  ),
-                  _buildProfileItem(
-                    context,
-                    Icons.location_on_outlined,
-                    'Location',
-                    'San Francisco, CA',
-                    () {},
-                  ),
-                  _buildProfileItem(
-                    context,
-                    Icons.work_outline,
-                    'Department',
-                    'Engineering',
-                    () {},
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Card(
-              child: Column(
-                children: [
-                  _buildSettingsItem(
-                    context,
-                    Icons.notifications_outlined,
-                    'Notifications',
-                    () {},
-                  ),
-                  _buildSettingsItem(
-                    context,
-                    Icons.privacy_tip_outlined,
-                    'Privacy',
-                    () {},
-                  ),
-                  _buildSettingsItem(
-                    context,
-                    Icons.security_outlined,
-                    'Security',
-                    () {},
-                  ),
-                  _buildSettingsItem(
-                    context,
-                    Icons.palette_outlined,
-                    'Theme',
-                    () {},
-                  ),
-                  _buildSettingsItem(
-                    context,
-                    Icons.language_outlined,
-                    'Language',
-                    () {},
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Card(
-              child: Column(
-                children: [
-                  _buildSettingsItem(
-                    context,
-                    Icons.help_outline,
-                    'Help & Support',
-                    () {},
-                  ),
-                  _buildSettingsItem(
-                    context,
-                    Icons.info_outline,
-                    'About',
-                    () {},
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.logout,
-                      color: Colors.red,
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Card(
+                child: Column(
+                  children: [
+                    _buildSettingsItem(
+                      context,
+                      Icons.notifications_outlined,
+                      'Notifications',
+                      () {},
                     ),
-                    title: Text(
-                      'Sign Out',
-                      style: TextStyle(
+                    _buildSettingsItem(
+                      context,
+                      Icons.privacy_tip_outlined,
+                      'Privacy',
+                      () {},
+                    ),
+                    _buildSettingsItem(
+                      context,
+                      Icons.security_outlined,
+                      'Security',
+                      () {},
+                    ),
+                    _buildSettingsItem(
+                      context,
+                      Icons.palette_outlined,
+                      'Theme',
+                      () => _showThemeSelector(context, ref),
+                    ),
+                    _buildSettingsItem(
+                      context,
+                      Icons.language_outlined,
+                      'Language',
+                      () {},
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Card(
+                child: Column(
+                  children: [
+                    _buildSettingsItem(
+                      context,
+                      Icons.help_outline,
+                      'Help & Support',
+                      () {},
+                    ),
+                    _buildSettingsItem(
+                      context,
+                      Icons.info_outline,
+                      'About',
+                      () {},
+                    ),
+                    ListTile(
+                      leading: Icon(
+                        Icons.logout,
                         color: Colors.red,
-                        fontWeight: FontWeight.w500,
+                      ),
+                      title: Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      onTap: () => _showSignOutDialog(context, ref),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        color: Colors.red,
                       ),
                     ),
-                    onTap: () {},
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Colors.red,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 32)),
-      ],
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
+      ),
     );
   }
 
@@ -1676,6 +1656,300 @@ class ProfileTab extends StatelessWidget {
         color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       onTap: onTap,
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('MMM d, yyyy').format(date);
+  }
+
+  void _showEditProfile(BuildContext context, WidgetRef ref) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Edit profile feature coming soon!')),
+    );
+  }
+
+  void _showMoreOptions(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.download),
+                title: const Text('Export Profile Data'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Export feature coming soon!')),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_forever),
+                title: const Text('Delete Account'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeleteAccountDialog(context, ref);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Account'),
+          content: const Text(
+            'Are you sure you want to permanently delete your account? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                try {
+                  final authService = ref.read(authServiceProvider);
+                  await authService.deleteAccount();
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error deleting account: $e')),
+                  );
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSignOutDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Sign Out'),
+          content: const Text('Are you sure you want to sign out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                try {
+                  final authService = ref.read(authServiceProvider);
+                  await authService.signOut();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Signed out successfully')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error signing out: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Sign Out'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showThemeSelector(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // Title
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.palette,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Choose Theme',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Theme Options
+                  Expanded(
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        final currentTheme = ref.watch(themeProvider);
+                        return ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: AppThemeMode.values.length,
+                          itemBuilder: (context, index) {
+                            final theme = AppThemeMode.values[index];
+                            final isSelected = currentTheme == theme;
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer
+                                        .withValues(alpha: 0.3)
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                                border: isSelected
+                                    ? Border.all(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        width: 2,
+                                      )
+                                    : null,
+                              ),
+                              child: ListTile(
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: theme.primaryColor,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline
+                                          .withValues(alpha: 0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    theme.icon,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                                title: Text(
+                                  theme.displayName,
+                                  style: TextStyle(
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  isSelected
+                                      ? 'Currently active'
+                                      : 'Tap to apply',
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withValues(alpha: 0.8)
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                trailing: isSelected
+                                    ? Icon(
+                                        Icons.check_circle,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      )
+                                    : const Icon(Icons.chevron_right),
+                                onTap: () {
+                                  if (!isSelected) {
+                                    ref
+                                        .read(themeProvider.notifier)
+                                        .setTheme(theme);
+                                  }
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  // Bottom padding
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
