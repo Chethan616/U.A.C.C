@@ -1,0 +1,24 @@
+# Core ASR / NLP
+openai==1.45.0          # OpenAI API (summarization, embeddings, etc.)
+transformers==4.44.2    # HuggingFace transformers (LLaMA, BERT, Mistral)
+torch==2.4.1            # PyTorch backend
+sentencepiece==0.2.0    # Tokenization support (LLaMA/Mistral)
+
+# Whisper speech-to-text
+whisper==1.1.10
+torchaudio==2.4.1
+
+# Server framework (if using Python backend with n8n/FastAPI)
+fastapi==0.115.0
+uvicorn==0.31.0
+
+# Firebase integration
+firebase-admin==6.5.0
+
+# Data handling
+numpy==2.1.1
+pandas==2.2.2
+
+# Utilities
+python-dotenv==1.0.1    # Load .env configs
+requests==2.32.3
