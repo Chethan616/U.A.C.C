@@ -24,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.base,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: LoadingOverlay(
           isLoading: _isLoading,
@@ -78,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Text(
           'Sign in to continue to UACC',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.muted,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
         ),
       ],

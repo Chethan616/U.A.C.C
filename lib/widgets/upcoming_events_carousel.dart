@@ -1,6 +1,6 @@
 // lib/widgets/upcoming_events_carousel.dart
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+// Uses Theme.of(context) tokens for colors
 
 class UpcomingEventsCarousel extends StatefulWidget {
   const UpcomingEventsCarousel({Key? key}) : super(key: key);
@@ -189,13 +189,13 @@ class _UpcomingEventsCarouselState extends State<UpcomingEventsCarousel> {
                   Icon(
                     Icons.schedule,
                     size: 16,
-                    color: AppColors.muted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '${event.date} • ${event.time}',
                     style: TextStyle(
-                      color: AppColors.muted,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -208,14 +208,14 @@ class _UpcomingEventsCarouselState extends State<UpcomingEventsCarousel> {
                   Icon(
                     Icons.location_on,
                     size: 16,
-                    color: AppColors.muted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       event.location,
                       style: TextStyle(
-                        color: AppColors.muted,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                       maxLines: 1,
@@ -233,10 +233,10 @@ class _UpcomingEventsCarouselState extends State<UpcomingEventsCarousel> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: AppColors.border,
+                        color: Theme.of(context).colorScheme.outline,
                         width: 1,
                       ),
                     ),
@@ -246,13 +246,14 @@ class _UpcomingEventsCarouselState extends State<UpcomingEventsCarousel> {
                         Icon(
                           Icons.people,
                           size: 14,
-                          color: AppColors.muted,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${event.attendees}',
                           style: TextStyle(
-                            color: AppColors.muted,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),

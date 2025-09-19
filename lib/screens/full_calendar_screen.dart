@@ -74,12 +74,12 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Calendar'),
-          backgroundColor: Theme.of(context).colorScheme.background,
-          foregroundColor: Theme.of(context).colorScheme.onBackground,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
           elevation: 0,
           centerTitle: true,
         ),
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -92,7 +92,7 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
-                        color: AppColors.outline,
+                        color: Theme.of(context).colorScheme.outline,
                         width: 1.0,
                       ),
                     ),
@@ -395,7 +395,9 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                                                   .textTheme
                                                   .bodySmall
                                                   ?.copyWith(
-                                                    color: AppColors.muted,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
                                                   ),
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,

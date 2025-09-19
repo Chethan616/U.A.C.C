@@ -1,6 +1,5 @@
 // lib/widgets/custom_app_bar.dart
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -22,8 +21,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       title: Text(title),
-      backgroundColor: AppColors.base,
-      foregroundColor: AppColors.text,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       leading: leading ??
@@ -38,7 +37,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         preferredSize: const Size.fromHeight(1),
         child: Container(
           height: 1,
-          color: AppColors.border,
+          color: Theme.of(context).colorScheme.outline,
         ),
       ),
     );
@@ -70,8 +69,8 @@ class CustomSliverAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverAppBar(
       title: Text(title),
-      backgroundColor: AppColors.base,
-      foregroundColor: AppColors.text,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       pinned: pinned,

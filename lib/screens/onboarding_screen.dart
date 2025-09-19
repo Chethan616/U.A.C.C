@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../theme/app_theme.dart';
-import '../widgets/custom_app_bar.dart';
-import '../providers/app_state_provider.dart';
+import '../services/permissions_service.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -54,7 +53,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       title: "Enable Permissions",
       subtitle: "For the best experience",
       description:
-          "Grant access to microphone, notifications, and phone to enable smart call and notification processing.",
+          "Grant access to essential permissions to enable smart call and notification processing.",
       icon: Icons.settings,
       color: AppColors.accent,
       isPermissionsPage: true,
@@ -64,7 +63,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.base,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -165,7 +164,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Text(
               page.subtitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.muted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
               textAlign: TextAlign.center,
             ),
@@ -173,7 +172,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Text(
               page.description,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.muted,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     height: 1.5,
                   ),
               textAlign: TextAlign.center,
@@ -185,152 +184,303 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildPermissionsPage(OnboardingPage page) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: page.color.withOpacity(0.15),
-                shape: BoxShape.circle,
+    return Consumer(
+      builder: (context, ref, child) {
+        final permissionState = ref.watch(permissionsServiceProvider);
+        final permissionsService =
+            ref.read(permissionsServiceProvider.notifier);
+
+        return Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: page.color.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  page.icon,
+                  size: 60,
+                  color: page.color,
+                ),
               ),
-              child: Icon(
-                page.icon,
-                size: 60,
-                color: page.color,
+              const SizedBox(height: 32),
+              Text(
+                page.title,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              page.title,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+              const SizedBox(height: 8),
+              Text(
+                page.subtitle,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.muted,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+
+              // Progress Indicator
+              if (permissionState.totalCount > 0) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              page.subtitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.muted,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Permissions Progress',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          Text(
+                            '${permissionState.grantedCount}/${permissionState.totalCount}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: permissionState.progress,
+                        backgroundColor: AppColors.border,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          permissionState.progress == 1.0
+                              ? AppColors.success
+                              : AppColors.primary,
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ],
                   ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              page.description,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.muted,
-                    height: 1.5,
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // Permissions List
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Required Permissions Section
+                      _buildPermissionSection(
+                        'Required Permissions',
+                        'These permissions are essential for core app functionality',
+                        PermissionType.values
+                            .where((p) => p.isRequired)
+                            .toList(),
+                        permissionState,
+                        permissionsService,
+                        isRequired: true,
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Optional Permissions Section
+                      _buildPermissionSection(
+                        'Optional Permissions',
+                        'These permissions enhance your experience but are not required',
+                        PermissionType.values
+                            .where((p) => !p.isRequired)
+                            .toList(),
+                        permissionState,
+                        permissionsService,
+                        isRequired: false,
+                      ),
+                      const SizedBox(height: 32),
+                    ],
                   ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            _buildPermissionsList(),
-          ],
-        ),
-      ),
+                ),
+              ),
+
+              // Action Buttons
+              Column(
+                children: [
+                  if (permissionState.isLoading)
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    )
+                  else ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () async {
+                          await permissionsService
+                              .requestAllRequiredPermissions();
+                        },
+                        icon: const Icon(Icons.security),
+                        label: const Text('Grant Required Permissions'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await permissionsService.requestAllPermissions();
+                        },
+                        icon: const Icon(Icons.done_all),
+                        label: const Text('Grant All Permissions'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (permissionState.error != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: AppColors.danger.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline,
+                              color: AppColors.danger, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              permissionState.error!,
+                              style: TextStyle(
+                                color: AppColors.danger,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: permissionsService.clearError,
+                            child: Text(
+                              'Dismiss',
+                              style: TextStyle(color: AppColors.danger),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildPermissionsList() {
-    final permissions = [
-      PermissionInfo(
-        title: 'Microphone',
-        description: 'Record and transcribe calls',
-        icon: Icons.mic,
-        permission: Permission.microphone,
-      ),
-      PermissionInfo(
-        title: 'Phone',
-        description: 'Access call information',
-        icon: Icons.phone,
-        permission: Permission.phone,
-      ),
-      PermissionInfo(
-        title: 'Notifications',
-        description: 'Read and analyze notifications',
-        icon: Icons.notifications,
-        permission: Permission.notification,
-      ),
-      PermissionInfo(
-        title: 'Storage',
-        description: 'Save call recordings and summaries',
-        icon: Icons.storage,
-        permission: Permission.storage,
-      ),
-    ];
-
+  Widget _buildPermissionSection(
+    String title,
+    String description,
+    List<PermissionType> permissions,
+    PermissionState permissionState,
+    PermissionsService permissionsService, {
+    required bool isRequired,
+  }) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...permissions
-            .map((permissionInfo) => _buildPermissionCard(permissionInfo)),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _requestAllPermissions,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.text,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+        Row(
+          children: [
+            Icon(
+              isRequired ? Icons.security : Icons.tune,
+              color: isRequired ? AppColors.primary : AppColors.accent,
+              size: 20,
             ),
-            child: const Text(
-              'Grant Permissions',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isRequired ? AppColors.primary : AppColors.accent,
+                  ),
             ),
-          ),
+          ],
         ),
-        const SizedBox(height: 12),
-        TextButton(
-          onPressed: _skipPermissions,
-          child: Text(
-            'Skip for now',
-            style: TextStyle(
-              color: AppColors.muted,
-              fontSize: 14,
-            ),
-          ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.muted,
+              ),
         ),
+        const SizedBox(height: 16),
+        ...permissions.map((permissionType) => _buildPermissionCard(
+              permissionType,
+              permissionState,
+              permissionsService,
+            )),
       ],
     );
   }
 
-  Widget _buildPermissionCard(PermissionInfo permissionInfo) {
+  Widget _buildPermissionCard(
+    PermissionType permissionType,
+    PermissionState permissionState,
+    PermissionsService permissionsService,
+  ) {
+    final status =
+        permissionState.permissions[permissionType] ?? PermissionStatus.denied;
+    final isGranted = status == PermissionStatus.granted;
+    final isPermanentlyDenied = status == PermissionStatus.permanentlyDenied;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.border,
-          width: 1,
+          color: isGranted
+              ? AppColors.success.withOpacity(0.3)
+              : permissionType.isRequired && !isGranted
+                  ? AppColors.danger.withOpacity(0.3)
+                  : Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          width: 1.5,
         ),
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              shape: BoxShape.circle,
+              color: permissionType.color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(24),
             ),
             child: Icon(
-              permissionInfo.icon,
-              color: AppColors.primary,
-              size: 20,
+              permissionType.icon,
+              color: permissionType.color,
+              size: 24,
             ),
           ),
           const SizedBox(width: 16),
@@ -338,84 +488,124 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  permissionInfo.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      permissionType.displayName,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    if (permissionType.isRequired) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Required',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  permissionInfo.description,
-                  style: TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 13,
-                  ),
+                  permissionType.description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.muted,
+                        height: 1.3,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      isGranted
+                          ? Icons.check_circle
+                          : isPermanentlyDenied
+                              ? Icons.block
+                              : Icons.radio_button_unchecked,
+                      color: isGranted
+                          ? AppColors.success
+                          : isPermanentlyDenied
+                              ? AppColors.danger
+                              : AppColors.muted,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isGranted
+                          ? 'Granted'
+                          : isPermanentlyDenied
+                              ? 'Permanently Denied'
+                              : 'Not Granted',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isGranted
+                            ? AppColors.success
+                            : isPermanentlyDenied
+                                ? AppColors.danger
+                                : AppColors.muted,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          FutureBuilder<PermissionStatus>(
-            future: permissionInfo.permission.status,
-            builder: (context, snapshot) {
-              final status = snapshot.data ?? PermissionStatus.denied;
-              return Icon(
-                status == PermissionStatus.granted
-                    ? Icons.check_circle
-                    : Icons.circle_outlined,
-                color: status == PermissionStatus.granted
-                    ? AppColors.success
-                    : AppColors.muted,
-                size: 24,
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _requestAllPermissions() async {
-    final permissions = [
-      Permission.microphone,
-      Permission.phone,
-      Permission.notification,
-      Permission.storage,
-    ];
-
-    for (final permission in permissions) {
-      await permission.request();
-    }
-
-    // Refresh the UI to show updated permission status
-    setState(() {});
-
-    // Small delay to show the updated status, then continue
-    await Future.delayed(const Duration(milliseconds: 500));
-    _nextPage();
-  }
-
-  void _skipPermissions() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Skip Permissions?'),
-        content: const Text(
-          'Some features may not work properly without these permissions. You can grant them later in settings.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _nextPage();
-            },
-            child: const Text('Skip'),
-          ),
+          const SizedBox(width: 12),
+          if (isPermanentlyDenied)
+            TextButton(
+              onPressed: () async {
+                await openAppSettings();
+              },
+              child: Text(
+                'Settings',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.primary,
+                ),
+              ),
+            )
+          else if (!isGranted)
+            FilledButton(
+              onPressed: permissionState.isLoading
+                  ? null
+                  : () async {
+                      await permissionsService
+                          .requestPermission(permissionType);
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: permissionType.color,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                minimumSize: const Size(0, 32),
+              ),
+              child: Text(
+                'Grant',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          else
+            Icon(
+              Icons.check_circle,
+              color: AppColors.success,
+              size: 24,
+            ),
         ],
       ),
     );
@@ -443,8 +633,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _finishOnboarding() async {
-    // Mark onboarding as completed using Riverpod
-    ref.read(appInitializationProvider.notifier).completeOnboarding();
+    // Complete permissions onboarding
+    final permissionsService = ref.read(permissionsServiceProvider.notifier);
+    await permissionsService.completeOnboarding();
+
+    // Navigate to login screen
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   @override
@@ -469,268 +665,5 @@ class OnboardingPage {
     required this.icon,
     required this.color,
     this.isPermissionsPage = false,
-  });
-}
-
-// Permissions Screen
-class PermissionsScreen extends ConsumerStatefulWidget {
-  const PermissionsScreen({super.key});
-
-  @override
-  ConsumerState<PermissionsScreen> createState() => _PermissionsScreenState();
-}
-
-class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
-  final Map<String, bool> _permissions = {
-    'notifications': false,
-    'microphone': false,
-    'phone': false,
-    'storage': false,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.base,
-      appBar: const CustomAppBar(title: 'Permissions Required'),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Grant Permissions',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'To provide the best experience, we need access to the following permissions:',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.muted,
-                  ),
-            ),
-            const SizedBox(height: 32),
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildPermissionItem(
-                    title: 'Notifications',
-                    description:
-                        'Access notifications to provide smart summaries',
-                    icon: Icons.notifications,
-                    key: 'notifications',
-                    isRequired: true,
-                  ),
-                  _buildPermissionItem(
-                    title: 'Microphone',
-                    description: 'Record calls for transcription and analysis',
-                    icon: Icons.mic,
-                    key: 'microphone',
-                    isRequired: true,
-                  ),
-                  _buildPermissionItem(
-                    title: 'Phone Access',
-                    description: 'Detect incoming and outgoing calls',
-                    icon: Icons.phone,
-                    key: 'phone',
-                    isRequired: true,
-                  ),
-                  _buildPermissionItem(
-                    title: 'Storage',
-                    description: 'Store audio files and processed data locally',
-                    icon: Icons.storage,
-                    key: 'storage',
-                    isRequired: false,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _allRequiredPermissionsGranted()
-                    ? _continueToLogin
-                    : _requestPermissions,
-                child: Text(_allRequiredPermissionsGranted()
-                    ? 'Continue'
-                    : 'Grant Permissions'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: _skipForNow,
-                child: const Text('Skip for now'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPermissionItem({
-    required String title,
-    required String description,
-    required IconData icon,
-    required String key,
-    required bool isRequired,
-  }) {
-    final isGranted = _permissions[key] ?? false;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: isGranted
-                    ? AppColors.success.withOpacity(0.15)
-                    : AppColors.muted.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: isGranted ? AppColors.success : AppColors.muted,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      if (isRequired) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Required',
-                            style: TextStyle(
-                              color: AppColors.danger,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              isGranted ? Icons.check_circle : Icons.circle_outlined,
-              color: isGranted ? AppColors.success : AppColors.muted,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  bool _allRequiredPermissionsGranted() {
-    return _permissions['notifications']! &&
-        _permissions['microphone']! &&
-        _permissions['phone']!;
-  }
-
-  void _requestPermissions() async {
-    // Simulate permission request
-    await Future.delayed(const Duration(seconds: 1));
-
-    setState(() {
-      _permissions['notifications'] = true;
-      _permissions['microphone'] = true;
-      _permissions['phone'] = true;
-      _permissions['storage'] = true;
-    });
-
-    _showPermissionResult();
-  }
-
-  void _showPermissionResult() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Permissions Granted'),
-        content: const Text(
-            'All required permissions have been granted successfully!'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _continueToLogin();
-            },
-            child: const Text('Continue'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _continueToLogin() async {
-    // Mark onboarding as completed using Riverpod
-    ref.read(appInitializationProvider.notifier).completeOnboarding();
-  }
-
-  void _skipForNow() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Skip Permissions?'),
-        content: const Text(
-            'Some features may not work properly without these permissions. You can grant them later in settings.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _continueToLogin();
-            },
-            child: const Text('Skip'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class PermissionInfo {
-  final String title;
-  final String description;
-  final IconData icon;
-  final Permission permission;
-
-  PermissionInfo({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.permission,
   });
 }

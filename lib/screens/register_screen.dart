@@ -34,7 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.base,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -76,14 +76,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'Create Account',
           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: AppColors.text,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
         ),
         const SizedBox(height: 8),
         Text(
           'Join UACC and start managing your calls intelligently',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.muted,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
         ),
       ],

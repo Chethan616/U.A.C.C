@@ -97,58 +97,90 @@ final themeProvider = StateNotifierProvider<ThemeNotifier, AppThemeMode>((ref) {
 });
 
 class AppThemes {
-  // Original Theme (Current warm theme)
+  // Original Theme - Preserved with warm colors from app.md (#F9E8D4 background)
   static ThemeData get originalTheme => _buildTheme(
-        primaryColor: const Color(0xFFD9B88A),
-        secondaryColor: const Color(0xFFF6C84A),
-        surfaceColor: const Color(0xFFF9E8D4),
-        backgroundColor: const Color(0xFFFEF1E1),
-        cardColor: const Color(0xFFFEF1E1),
+        primaryColor: const Color(0xFFD9B88A), // from app.md
+        secondaryColor: const Color(0xFFF6C84A), // from app.md
+        surfaceColor: const Color(0xFFF9E8D4), // base from app.md
+        backgroundColor: const Color(0xFFFEF1E1), // original warm background
+        cardColor: const Color(0xFFFFFDF9), // surface from app.md
+        brightness: Brightness.light,
       );
 
-  // Material 3 Violet Theme
-  static ThemeData get violetTheme => _buildTheme(
+  // Material 3 Violet Theme - Pure white/black system-aware
+  static ThemeData violetTheme(Brightness systemBrightness) => _buildTheme(
         primaryColor: const Color(0xFF6750A4),
         secondaryColor: const Color(0xFFE8DEF8),
-        surfaceColor: const Color(0xFFFDF7FF),
-        backgroundColor: const Color(0xFFFFFBFF),
-        cardColor: const Color(0xFFFDF7FF),
+        surfaceColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF121212), // Material 3 dark surface
+        backgroundColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : Colors.black, // Pure white/black
+        cardColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF1E1E1E), // Material 3 dark card
+        brightness: systemBrightness,
       );
 
-  // Material 3 Green Theme
-  static ThemeData get greenTheme => _buildTheme(
+  // Material 3 Green Theme - Pure white/black system-aware
+  static ThemeData greenTheme(Brightness systemBrightness) => _buildTheme(
         primaryColor: const Color(0xFF386A20),
         secondaryColor: const Color(0xFFDDEDD0),
-        surfaceColor: const Color(0xFFF8FFF0),
-        backgroundColor: const Color(0xFFFDFFEF),
-        cardColor: const Color(0xFFF8FFF0),
+        surfaceColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF121212),
+        backgroundColor:
+            systemBrightness == Brightness.light ? Colors.white : Colors.black,
+        cardColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF1E1E1E),
+        brightness: systemBrightness,
       );
 
-  // Material 3 Blue Theme
-  static ThemeData get blueTheme => _buildTheme(
+  // Material 3 Blue Theme - Pure white/black system-aware
+  static ThemeData blueTheme(Brightness systemBrightness) => _buildTheme(
         primaryColor: const Color(0xFF1976D2),
         secondaryColor: const Color(0xFFD1E4FF),
-        surfaceColor: const Color(0xFFF1F8FF),
-        backgroundColor: const Color(0xFFFCFCFF),
-        cardColor: const Color(0xFFF1F8FF),
+        surfaceColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF121212),
+        backgroundColor:
+            systemBrightness == Brightness.light ? Colors.white : Colors.black,
+        cardColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF1E1E1E),
+        brightness: systemBrightness,
       );
 
-  // Material 3 Orange Theme
-  static ThemeData get orangeTheme => _buildTheme(
+  // Material 3 Orange Theme - Pure white/black system-aware
+  static ThemeData orangeTheme(Brightness systemBrightness) => _buildTheme(
         primaryColor: const Color(0xFFFF8C00),
         secondaryColor: const Color(0xFFFFE0B2),
-        surfaceColor: const Color(0xFFFFF8F0),
-        backgroundColor: const Color(0xFFFFFBF7),
-        cardColor: const Color(0xFFFFF8F0),
+        surfaceColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF121212),
+        backgroundColor:
+            systemBrightness == Brightness.light ? Colors.white : Colors.black,
+        cardColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF1E1E1E),
+        brightness: systemBrightness,
       );
 
-  // Material 3 Red Theme
-  static ThemeData get redTheme => _buildTheme(
+  // Material 3 Red Theme - Pure white/black system-aware
+  static ThemeData redTheme(Brightness systemBrightness) => _buildTheme(
         primaryColor: const Color(0xFFD32F2F),
         secondaryColor: const Color(0xFFFFCDD2),
-        surfaceColor: const Color(0xFFFFF5F5),
-        backgroundColor: const Color(0xFFFFFEFE),
-        cardColor: const Color(0xFFFFF5F5),
+        surfaceColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF121212),
+        backgroundColor:
+            systemBrightness == Brightness.light ? Colors.white : Colors.black,
+        cardColor: systemBrightness == Brightness.light
+            ? Colors.white
+            : const Color(0xFF1E1E1E),
+        brightness: systemBrightness,
       );
 
   static ThemeData _buildTheme({
@@ -157,24 +189,52 @@ class AppThemes {
     required Color surfaceColor,
     required Color backgroundColor,
     required Color cardColor,
+    Brightness? brightness,
   }) {
-    final textColor = const Color(0xFF2F2B28);
-    final mutedColor = const Color(0xFF6B5E53);
+    final actualBrightness = brightness ?? Brightness.light;
+
+    // Enhanced text colors for better visibility
+    final textColor = actualBrightness == Brightness.light
+        ? const Color(0xFF1C1B1F) // Darker text for light mode
+        : const Color(0xFFE6E1E5); // Lighter text for dark mode
+    final mutedColor = actualBrightness == Brightness.light
+        ? const Color(0xFF49454F) // Better contrast for light mode
+        : const Color(0xFFCAC4D0); // Better contrast for dark mode
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
-        brightness: Brightness.light,
+        brightness: actualBrightness,
         surface: surfaceColor,
         surfaceContainer: cardColor,
+        onSurface: textColor,
       ),
       scaffoldBackgroundColor: backgroundColor,
       cardColor: cardColor,
+      textTheme: TextTheme(
+        displayLarge: TextStyle(color: textColor),
+        displayMedium: TextStyle(color: textColor),
+        displaySmall: TextStyle(color: textColor),
+        headlineLarge: TextStyle(color: textColor),
+        headlineMedium: TextStyle(color: textColor),
+        headlineSmall: TextStyle(color: textColor),
+        titleLarge: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+        titleSmall: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(color: textColor),
+        bodyMedium: TextStyle(color: textColor),
+        bodySmall: TextStyle(color: mutedColor),
+        labelLarge: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+        labelMedium: TextStyle(color: mutedColor),
+        labelSmall: TextStyle(color: mutedColor),
+      ),
       cardTheme: CardThemeData(
         color: cardColor,
         elevation: 2,
-        shadowColor: Colors.black.withValues(alpha: 0.08),
+        shadowColor: actualBrightness == Brightness.light
+            ? Colors.black.withValues(alpha: 0.08)
+            : Colors.black.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
@@ -189,6 +249,7 @@ class AppThemes {
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
+        iconTheme: IconThemeData(color: textColor),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -281,28 +342,34 @@ class AppThemes {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: primaryColor, width: 2),
         ),
+        labelStyle: TextStyle(color: mutedColor),
+        hintStyle: TextStyle(color: mutedColor),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
+      iconTheme: IconThemeData(color: textColor),
+      primaryIconTheme: IconThemeData(color: textColor),
     );
   }
 
-  static ThemeData getTheme(AppThemeMode mode) {
+  static ThemeData getTheme(AppThemeMode mode, [Brightness? systemBrightness]) {
+    final brightness = systemBrightness ?? Brightness.light;
+
     switch (mode) {
       case AppThemeMode.original:
         return originalTheme;
       case AppThemeMode.violet:
-        return violetTheme;
+        return violetTheme(brightness);
       case AppThemeMode.green:
-        return greenTheme;
+        return greenTheme(brightness);
       case AppThemeMode.blue:
-        return blueTheme;
+        return blueTheme(brightness);
       case AppThemeMode.orange:
-        return orangeTheme;
+        return orangeTheme(brightness);
       case AppThemeMode.red:
-        return redTheme;
+        return redTheme(brightness);
       case AppThemeMode.system:
-        return violetTheme; // Default fallback
+        return violetTheme(brightness); // Default fallback
     }
   }
 }

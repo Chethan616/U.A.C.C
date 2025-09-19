@@ -62,7 +62,8 @@ class UACCApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentTheme = ref.watch(themeProvider);
-    final theme = AppThemes.getTheme(currentTheme);
+    final systemBrightness = MediaQuery.platformBrightnessOf(context);
+    final theme = AppThemes.getTheme(currentTheme, systemBrightness);
 
     return MaterialApp(
       title: 'UACC - Universal AI Call Companion',

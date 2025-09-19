@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+// Theme colors are read from Theme.of(context) to respect selected Material 3 themes
 import '../models/enums.dart';
 
 class PriorityBadge extends StatefulWidget {
@@ -150,28 +150,30 @@ class _PriorityBadgeState extends State<PriorityBadge>
   }
 
   _PriorityConfig _getPriorityConfig(PriorityLevel priority) {
+    final colors = Theme.of(context).colorScheme;
+
     switch (priority) {
       case PriorityLevel.urgent:
         return _PriorityConfig(
-          color: Colors.red.shade700,
+          color: colors.error, // use theme error for urgent
           text: 'URGENT',
           icon: Icons.warning_rounded,
         );
       case PriorityLevel.high:
         return _PriorityConfig(
-          color: Colors.orange.shade700,
+          color: colors.primary, // high priority uses primary accent
           text: 'HIGH',
           icon: Icons.priority_high_rounded,
         );
       case PriorityLevel.medium:
         return _PriorityConfig(
-          color: AppColors.accent,
+          color: colors.secondary, // medium uses secondary/accent
           text: 'MEDIUM',
           icon: Icons.circle_rounded,
         );
       case PriorityLevel.low:
         return _PriorityConfig(
-          color: AppColors.success,
+          color: colors.tertiary, // use tertiary from color scheme
           text: 'LOW',
           icon: Icons.check_circle_rounded,
         );

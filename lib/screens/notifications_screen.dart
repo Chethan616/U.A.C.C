@@ -1,6 +1,5 @@
 // lib/screens/notifications_screen.dart
 import 'package:flutter/material.dart';
-import 'package:animations/animations.dart';
 import '../theme/app_theme.dart';
 import '../models/enums.dart';
 import 'notification_detail_screen.dart';
@@ -126,7 +125,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     final filteredNotifications = _getFilteredNotifications();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF1E1), // Using the requested color
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAnimatedAppBar(),
       body: Column(
         children: [
@@ -142,7 +141,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
   PreferredSizeWidget _buildAnimatedAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFFFEF1E1),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
@@ -150,7 +149,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           tag: 'back_button',
           child: Icon(
             Icons.arrow_back_ios_new,
-            color: AppColors.text,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         onPressed: () => Navigator.pop(context),
@@ -193,7 +192,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               child: IconButton(
                 icon: Icon(
                   Icons.tune,
-                  color: AppColors.text,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 onPressed: () {
                   // Show filter options
@@ -257,11 +256,15 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                               _selectedFilter = filter;
                             });
                           },
-                          backgroundColor: const Color(0xFFFEF1E1),
+                          backgroundColor:
+                              Theme.of(context).colorScheme.surface,
                           selectedColor: AppColors.primary.withOpacity(0.2),
                           labelStyle: TextStyle(
-                            color:
-                                isSelected ? AppColors.text : AppColors.muted,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                             fontWeight:
                                 isSelected ? FontWeight.w600 : FontWeight.w400,
                           ),
@@ -353,7 +356,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             },
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF1E1),
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: notificationItem.isReadLocal
@@ -379,7 +382,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppColors.base,
+                          color: Theme.of(context).scaffoldBackgroundColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
@@ -444,7 +447,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                   Text(
                     notification.body,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.muted,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           height: 1.4,
                         ),
                     maxLines: 2,

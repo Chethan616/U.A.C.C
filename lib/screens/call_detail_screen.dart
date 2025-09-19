@@ -32,7 +32,7 @@ class _CallDetailScreenState extends State<CallDetailScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.base,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: CustomAppBar(
         title: 'Call Details',
         showBackButton: true,
@@ -108,11 +108,12 @@ class _CallDetailScreenState extends State<CallDetailScreen>
           Row(
             children: [
               CircleAvatar(
-                backgroundColor: AppColors.primary.withOpacity(0.15),
+                backgroundColor:
+                    Theme.of(context).colorScheme.primary.withOpacity(0.15),
                 radius: 24,
-                child: const Icon(
+                child: Icon(
                   Icons.person,
-                  color: AppColors.primary,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 24,
                 ),
               ),

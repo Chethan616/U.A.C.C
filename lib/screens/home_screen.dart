@@ -84,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF1E1), // Updated to requested color
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
@@ -335,8 +335,8 @@ class _DashboardTabState extends State<DashboardTab>
       child: CustomScrollView(
         slivers: [
           SliverAppBar(
-            backgroundColor: const Color(0xFFFEF1E1),
-            foregroundColor: AppColors.text,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
             elevation: 0,
             floating: true,
             snap: true,
@@ -365,18 +365,23 @@ class _DashboardTabState extends State<DashboardTab>
                     children: [
                       Text(
                         'Good ${_getGreeting()}, Chethan',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                       ),
                       Text(
                         'Here\'s your daily summary',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.muted,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                     ],
                   ),
@@ -497,7 +502,7 @@ class _DashboardTabState extends State<DashboardTab>
                                     'Notifications',
                                     '28',
                                     'notifications',
-                                    Theme.of(context).colorScheme.secondary,
+                                    Theme.of(context).colorScheme.primary,
                                     1),
                               ),
                               Container(
@@ -507,7 +512,7 @@ class _DashboardTabState extends State<DashboardTab>
                               ),
                               Expanded(
                                 child: _buildStatItem('Tasks', '5', 'tasks',
-                                    Theme.of(context).colorScheme.tertiary, 2),
+                                    Theme.of(context).colorScheme.primary, 2),
                               ),
                             ],
                           ),

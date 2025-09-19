@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 
 class UserProfileWidget extends StatelessWidget {
@@ -11,17 +10,15 @@ class UserProfileWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = _authService.currentUser;
 
-    if (user == null) {
-      return const SizedBox.shrink();
-    }
+    if (user == null) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.outline,
+          color: Theme.of(context).colorScheme.outline,
           width: 1.0,
         ),
       ),
@@ -29,7 +26,8 @@ class UserProfileWidget extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: AppColors.primary.withOpacity(0.2),
+            backgroundColor:
+                Theme.of(context).colorScheme.primary.withOpacity(0.2),
             backgroundImage:
                 user.photoURL != null ? NetworkImage(user.photoURL!) : null,
             child: user.photoURL == null
@@ -40,7 +38,7 @@ class UserProfileWidget extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   )
                 : null,
@@ -60,7 +58,7 @@ class UserProfileWidget extends StatelessWidget {
                 Text(
                   user.email ?? '',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.muted,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                 ),
               ],
@@ -71,7 +69,6 @@ class UserProfileWidget extends StatelessWidget {
               if (value == 'logout') {
                 await _showLogoutDialog(context);
               } else if (value == 'profile') {
-                // Navigate to profile settings
                 Navigator.pushNamed(context, '/settings');
               }
             },
@@ -99,7 +96,7 @@ class UserProfileWidget extends StatelessWidget {
             ],
             icon: Icon(
               Icons.more_vert,
-              color: AppColors.muted,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -139,7 +136,7 @@ class UserProfileWidget extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to sign out: ${e.toString()}'),
-            backgroundColor: AppColors.danger,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }

@@ -36,8 +36,10 @@ final ThemeData appTheme = ThemeData(
     outline: AppColors.border,
     shadow: AppColors.shadow,
   ),
-  scaffoldBackgroundColor:
-      const Color(0xFFFEF1E1), // Updated to new background color
+  // Use the colorScheme.surface as the scaffold background so theme changes
+  // propagate consistently. Individual screens should prefer Theme.of(context)
+  // tokens rather than hard-coded AppColors.base.
+  scaffoldBackgroundColor: AppColors.surface,
   cardColor: AppColors.surface,
   cardTheme: CardThemeData(
     color: AppColors.surface,
@@ -48,7 +50,7 @@ final ThemeData appTheme = ThemeData(
     ),
   ),
   appBarTheme: AppBarTheme(
-    backgroundColor: AppColors.base,
+    backgroundColor: AppColors.surface,
     foregroundColor: AppColors.text,
     elevation: 0,
     surfaceTintColor: Colors.transparent,

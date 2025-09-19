@@ -25,7 +25,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.base,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: CustomAppBar(
         title: 'Notification Details',
         showBackButton: true,
@@ -88,7 +88,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
 
   Widget _buildNotificationHeader() {
     return Container(
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,7 +140,8 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                     Text(
                       widget.notificationData.category,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.muted,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                     ),
                   ],
@@ -154,7 +155,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
               Icon(
                 Icons.access_time,
                 size: 16,
-                color: AppColors.muted,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 4),
               Text(
@@ -166,8 +167,11 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: widget.notificationData.isRead
-                      ? AppColors.success.withOpacity(0.15)
-                      : AppColors.accent.withOpacity(0.15),
+                      ? Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withOpacity(0.15)
+                      : Theme.of(context).colorScheme.primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -264,7 +268,9 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.base.withOpacity(0.5),
+                  color: Theme.of(context)
+                      .scaffoldBackgroundColor
+                      .withOpacity(0.5),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.outline),
                 ),
@@ -289,7 +295,9 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                       Text(
                         widget.notificationData.bigText,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.muted,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                       ),
                     ],
