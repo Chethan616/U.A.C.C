@@ -74,12 +74,12 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Calendar'),
-          backgroundColor: AppColors.base,
-          foregroundColor: AppColors.text,
+          backgroundColor: Theme.of(context).colorScheme.background,
+          foregroundColor: Theme.of(context).colorScheme.onBackground,
           elevation: 0,
           centerTitle: true,
         ),
-        backgroundColor: AppColors.base,
+        backgroundColor: Theme.of(context).colorScheme.background,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -112,13 +112,20 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                                 children: [
                                   IconButton(
                                     onPressed: () => _showAddEventDialog(),
-                                    icon: const Icon(Icons.add,
-                                        color: AppColors.primary),
+                                    icon: Icon(
+                                      Icons.add,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
                                   ),
                                   IconButton(
                                     onPressed: () => Navigator.pop(context),
-                                    icon: const Icon(Icons.close,
-                                        color: AppColors.muted),
+                                    icon: Icon(
+                                      Icons.close,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -228,13 +235,15 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                   margin: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primary
+                        ? Theme.of(context).colorScheme.primary
                         : isToday
-                            ? AppColors.accent
+                            ? Theme.of(context).colorScheme.secondary
                             : Colors.transparent,
                     shape: BoxShape.circle,
                     border: hasEvent && !isSelected && !isToday
-                        ? Border.all(color: AppColors.primary, width: 1)
+                        ? Border.all(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 1)
                         : null,
                   ),
                   child: Center(
@@ -245,10 +254,12 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                           isCurrentMonth ? dayNumber.toString() : '',
                           style: TextStyle(
                             color: isSelected || isToday
-                                ? AppColors.text
+                                ? Theme.of(context).colorScheme.onPrimary
                                 : isCurrentMonth
-                                    ? AppColors.text
-                                    : AppColors.muted,
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                             fontWeight: isSelected || isToday || hasEvent
                                 ? FontWeight.bold
                                 : FontWeight.normal,
@@ -260,7 +271,7 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                             width: 4,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: AppColors.primary,
+                              color: Theme.of(context).colorScheme.primary,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -309,7 +320,8 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                           Icon(
                             Icons.event_note_outlined,
                             size: 48,
-                            color: AppColors.muted,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -318,7 +330,9 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  color: AppColors.muted,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
                                 ),
                           ),
                         ],
@@ -352,7 +366,9 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                                         width: 4,
                                         height: 40,
                                         decoration: BoxDecoration(
-                                          color: AppColors.primary,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
                                           borderRadius:
                                               BorderRadius.circular(2),
                                         ),
@@ -390,7 +406,9 @@ class _FullCalendarScreenState extends State<FullCalendarScreen>
                                       Icon(
                                         Icons.arrow_forward_ios,
                                         size: 16,
-                                        color: AppColors.muted,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
                                       ),
                                     ],
                                   ),

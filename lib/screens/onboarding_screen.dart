@@ -1,18 +1,19 @@
 // lib/screens/onboarding_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
-import '../services/app_state_service.dart';
+import '../providers/app_state_provider.dart';
 
-class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({Key? key}) : super(key: key);
+class OnboardingScreen extends ConsumerStatefulWidget {
+  const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
@@ -442,13 +443,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _finishOnboarding() async {
-    // Mark onboarding as completed and first launch as done
-    await AppStateService.instance.setOnboardingCompleted();
-    await AppStateService.instance.setFirstLaunchCompleted();
-
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
+    // Mark onboarding as completed using Riverpod
+    ref.read(appInitializationProvider.notifier).completeOnboarding();
   }
 
   @override
@@ -477,14 +473,14 @@ class OnboardingPage {
 }
 
 // Permissions Screen
-class PermissionsScreen extends StatefulWidget {
-  const PermissionsScreen({Key? key}) : super(key: key);
+class PermissionsScreen extends ConsumerStatefulWidget {
+  const PermissionsScreen({super.key});
 
   @override
-  State<PermissionsScreen> createState() => _PermissionsScreenState();
+  ConsumerState<PermissionsScreen> createState() => _PermissionsScreenState();
 }
 
-class _PermissionsScreenState extends State<PermissionsScreen> {
+class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
   final Map<String, bool> _permissions = {
     'notifications': false,
     'microphone': false,
@@ -696,13 +692,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   void _continueToLogin() async {
-    // Mark onboarding as completed and first launch as done
-    await AppStateService.instance.setOnboardingCompleted();
-    await AppStateService.instance.setFirstLaunchCompleted();
-
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
+    // Mark onboarding as completed using Riverpod
+    ref.read(appInitializationProvider.notifier).completeOnboarding();
   }
 
   void _skipForNow() {

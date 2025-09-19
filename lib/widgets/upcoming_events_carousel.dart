@@ -15,44 +15,44 @@ class _UpcomingEventsCarouselState extends State<UpcomingEventsCarousel> {
     initialPage: 0,
   );
 
-  final List<EventData> _events = [
-    EventData(
-      title: 'Team Meeting',
-      time: '2:00 PM - 3:00 PM',
-      date: 'Today',
-      location: 'Conference Room A',
-      attendees: 5,
-      color: AppColors.primary,
-      category: 'Work',
-    ),
-    EventData(
-      title: 'Doctor Appointment',
-      time: '4:30 PM - 5:00 PM',
-      date: 'Today',
-      location: 'City Hospital',
-      attendees: 2,
-      color: AppColors.accent,
-      category: 'Health',
-    ),
-    EventData(
-      title: 'Gym Session',
-      time: '7:00 PM - 8:30 PM',
-      date: 'Today',
-      location: 'Fitness Center',
-      attendees: 1,
-      color: AppColors.success,
-      category: 'Health',
-    ),
-    EventData(
-      title: 'Project Review',
-      time: '10:00 AM - 11:00 AM',
-      date: 'Tomorrow',
-      location: 'Online',
-      attendees: 8,
-      color: AppColors.primary,
-      category: 'Work',
-    ),
-  ];
+  List<EventData> get _events => [
+        EventData(
+          title: 'Team Meeting',
+          time: '2:00 PM - 3:00 PM',
+          date: 'Today',
+          location: 'Conference Room A',
+          attendees: 5,
+          color: Theme.of(context).colorScheme.primary,
+          category: 'Work',
+        ),
+        EventData(
+          title: 'Doctor Appointment',
+          time: '4:30 PM - 5:00 PM',
+          date: 'Today',
+          location: 'City Hospital',
+          attendees: 2,
+          color: Theme.of(context).colorScheme.secondary,
+          category: 'Health',
+        ),
+        EventData(
+          title: 'Gym Session',
+          time: '7:00 PM - 8:30 PM',
+          date: 'Today',
+          location: 'Fitness Center',
+          attendees: 1,
+          color: Theme.of(context).colorScheme.tertiary,
+          category: 'Health',
+        ),
+        EventData(
+          title: 'Project Review',
+          time: '10:00 AM - 11:00 AM',
+          date: 'Tomorrow',
+          location: 'Online',
+          attendees: 8,
+          color: Theme.of(context).colorScheme.primary,
+          category: 'Work',
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +101,7 @@ class _UpcomingEventsCarouselState extends State<UpcomingEventsCarousel> {
                 height: 8,
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.3),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -117,11 +117,11 @@ class _UpcomingEventsCarouselState extends State<UpcomingEventsCarousel> {
       margin: const EdgeInsets.symmetric(horizontal: 8),
       child: Card(
         elevation: 4,
-        shadowColor: AppColors.shadow.withOpacity(0.15),
+        shadowColor: Theme.of(context).colorScheme.shadow.withOpacity(0.15),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: AppColors.outline.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
             width: 1,
           ),
         ),

@@ -1,6 +1,6 @@
 // lib/widgets/summary_card.dart
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+// ...existing imports
 
 class SummaryCard extends StatefulWidget {
   final String title;
@@ -92,8 +92,8 @@ class _SummaryCardState extends State<SummaryCard>
                   borderRadius: BorderRadius.circular(16)),
               elevation: _isPressed ? 1 : 4,
               margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              color: AppColors.surface,
-              shadowColor: AppColors.shadow,
+              color: Theme.of(context).colorScheme.surface,
+              shadowColor: Theme.of(context).colorScheme.shadow,
               child: GestureDetector(
                 onTapDown: _onTapDown,
                 onTapUp: _onTapUp,
@@ -103,7 +103,7 @@ class _SummaryCardState extends State<SummaryCard>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppColors.outline,
+                      color: Theme.of(context).colorScheme.outline,
                       width: 1.0,
                     ),
                   ),
@@ -118,11 +118,13 @@ class _SummaryCardState extends State<SummaryCard>
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                color: (widget.accentColor ?? AppColors.accent)
+                                color: (widget.accentColor ??
+                                        Theme.of(context).colorScheme.secondary)
                                     .withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: widget.accentColor ?? AppColors.accent,
+                                  color: widget.accentColor ??
+                                      Theme.of(context).colorScheme.secondary,
                                   width: 1.5,
                                 ),
                               ),
@@ -130,7 +132,9 @@ class _SummaryCardState extends State<SummaryCard>
                                 child: widget.leadingIcon != null
                                     ? Icon(widget.leadingIcon,
                                         color: widget.accentColor ??
-                                            AppColors.accent,
+                                            Theme.of(context)
+                                                .colorScheme
+                                                .secondary,
                                         size: 22)
                                     : Text(
                                         widget.avatarText ??
@@ -139,7 +143,9 @@ class _SummaryCardState extends State<SummaryCard>
                                                 .toUpperCase(),
                                         style: TextStyle(
                                           color: widget.accentColor ??
-                                              AppColors.accent,
+                                              Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary,
                                           fontWeight: FontWeight.w700,
                                           fontSize: 18,
                                         ),
@@ -171,7 +177,9 @@ class _SummaryCardState extends State<SummaryCard>
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                        color: AppColors.muted,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
                                         fontWeight: FontWeight.w500,
                                       ),
                                 ),
@@ -181,13 +189,16 @@ class _SummaryCardState extends State<SummaryCard>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
                               Icons.arrow_forward_ios,
                               size: 14,
-                              color: AppColors.primary,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ],
@@ -197,7 +208,10 @@ class _SummaryCardState extends State<SummaryCard>
                         widget.summary,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               height: 1.5,
-                              color: AppColors.text.withOpacity(0.8),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.8),
                             ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,

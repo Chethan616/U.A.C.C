@@ -1,120 +1,76 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/home_screen.dart';
-import '../services/auth_service.dart';
-import '../services/app_state_service.dart';
+import '../providers/app_state_provider.dart';
+import '../widgets/loading_widget.dart';
 
-class AppInitializer extends StatefulWidget {
-  const AppInitializer({Key? key}) : super(key: key);
-
-  @override
-  State<AppInitializer> createState() => _AppInitializerState();
-}
-
-class _AppInitializerState extends State<AppInitializer> {
-  bool _isLoading = true;
-  bool _showOnboarding = false;
+class AppInitializer extends ConsumerWidget {
+  const AppInitializer({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    _initializeApp();
-  }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appInitialization = ref.watch(appInitializationProvider);
 
-  Future<void> _initializeApp() async {
-    try {
-      // Initialize app state service
-      await AppStateService.instance.initialize();
-
-      // Check if this is first launch or onboarding is not completed
-      final isFirstLaunch = await AppStateService.instance.isFirstLaunch();
-      final isOnboardingCompleted =
-          await AppStateService.instance.isOnboardingCompleted();
-
-      setState(() {
-        _showOnboarding = isFirstLaunch || !isOnboardingCompleted;
-        _isLoading = false;
-      });
-    } catch (e) {
-      // In case of error, show onboarding to be safe
-      setState(() {
-        _showOnboarding = true;
-        _isLoading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text(
-                'Initializing UACC...',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_showOnboarding) {
-      return const OnboardingScreen();
-    }
-
-    return const AuthWrapper();
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: AuthService().authStateChanges,
-      builder: (context, snapshot) {
-        // Show loading while checking auth state
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text(
-                    'Checking authentication...',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+    switch (appInitialization.state) {
+      case AppInitializationState.initializing:
+        return const Scaffold(
+          body: Center(
+            child: LoadingWidget(
+              message: 'Initializing UACC...',
+              size: 32.0,
             ),
-          );
-        }
+          ),
+        );
 
-        // Show home screen if user is signed in
-        if (snapshot.hasData && snapshot.data != null) {
-          return const HomeScreen();
-        }
+      case AppInitializationState.requiresOnboarding:
+        return const OnboardingScreen();
 
-        // Show login screen if user is not signed in
+      case AppInitializationState.requiresAuth:
         return const LoginScreen();
-      },
-    );
+
+      case AppInitializationState.authenticated:
+        return const HomeScreen();
+
+      case AppInitializationState.error:
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Initialization Error',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  appInitialization.error ?? 'Unknown error occurred',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () {
+                    ref.read(appInitializationProvider.notifier).retry();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        );
+    }
   }
 }

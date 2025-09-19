@@ -1,10 +1,13 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import '../theme/app_theme.dart';
 import '../models/enums.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/upcoming_events_carousel.dart';
+import '../utils/performant_animations.dart';
+import '../widgets/expressive_icons.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -74,6 +77,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _pageViewController = PageController(initialPage: 0);
     _animationController.forward();
     _fabController.forward();
+    // Ensure the initial page transition animation runs so the first tab
+    // is visible on first open. Without this the FadeTransition/SlideTransition
+    // driven by _pageController remains at 0.0 opacity until a nav action.
+    _pageController.forward();
   }
 
   @override
@@ -120,46 +127,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       floatingActionButton: _selectedIndex == 0
           ? ScaleTransition(
-              scale: Tween<double>(
-                begin: 0.0,
-                end: 1.0,
-              ).animate(CurvedAnimation(
-                parent: _fabController,
-                curve: Curves.elasticOut,
-              )),
+              scale: Tween<double>(begin: 0.0, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: _fabController,
+                  curve: Curves.elasticOut,
+                ),
+              ),
               child: FloatingActionButton.extended(
                 onPressed: _showQuickActions,
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 icon: const Icon(Icons.add),
                 label: const Text('Quick Add'),
                 heroTag: "dashboard_fab",
               ),
             )
           : null,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(16),
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          indicatorColor:
+              Theme.of(context).colorScheme.primary.withOpacity(0.12),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          labelTextStyle: MaterialStateProperty.all(
+            Theme.of(context).textTheme.labelSmall,
           ),
-          child: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) {
+        ),
+        child: PhysicalShape(
+          color: Theme.of(context).colorScheme.surface,
+          elevation: 8,
+          clipper: ShapeBorderClipper(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+          ),
+          child: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) {
               if (index != _selectedIndex) {
                 setState(() {
                   _selectedIndex = index;
                 });
 
-                // Enhanced page transition
+                // Reset and restart page animation for smooth transitions
                 _pageController.reset();
                 _pageController.forward();
 
@@ -169,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   curve: Curves.easeInOutCubic,
                 );
 
-                // FAB animation for dashboard
+                // Handle FAB visibility
                 if (index == 0) {
                   _fabController.forward();
                 } else {
@@ -177,57 +186,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 }
               }
             },
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            selectedItemColor: AppColors.primary,
-            unselectedItemColor: AppColors.muted,
-            elevation: 0,
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
-            items: _navItems
-                .asMap()
-                .entries
-                .map((entry) => BottomNavigationBarItem(
-                      icon: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOutCubic,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: _selectedIndex == entry.key ? 16 : 8,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _selectedIndex == entry.key
-                              ? AppColors.primary.withOpacity(0.15)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: AnimatedScale(
-                          scale: _selectedIndex == entry.key ? 1.1 : 1.0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOutCubic,
-                          child: entry.value.icon,
-                        ),
-                      ),
-                      activeIcon: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOutCubic,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: AnimatedScale(
-                          scale: 1.1,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOutCubic,
-                          child: entry.value.activeIcon,
-                        ),
-                      ),
-                      label: entry.value.label,
-                    ))
+            destinations: _navItems
+                .map(
+                  (entry) => NavigationDestination(
+                    icon: entry.icon,
+                    selectedIcon: entry.activeIcon,
+                    label: entry.label ?? '',
+                  ),
+                )
                 .toList(),
           ),
         ),
@@ -560,26 +526,34 @@ class _DashboardTabState extends State<DashboardTab>
                           child: Row(
                             children: [
                               Expanded(
-                                child: _buildStatItem('Calls Today', '12',
-                                    Icons.phone, AppColors.primary, 0),
+                                child: _buildStatItem(
+                                    'Calls Today',
+                                    '12',
+                                    'phone',
+                                    Theme.of(context).colorScheme.primary,
+                                    0),
                               ),
                               Container(
                                 width: 1,
                                 height: 60,
-                                color: AppColors.border,
+                                color: Theme.of(context).colorScheme.outline,
                               ),
                               Expanded(
-                                child: _buildStatItem('Notifications', '28',
-                                    Icons.notifications, AppColors.accent, 1),
+                                child: _buildStatItem(
+                                    'Notifications',
+                                    '28',
+                                    'notifications',
+                                    Theme.of(context).colorScheme.secondary,
+                                    1),
                               ),
                               Container(
                                 width: 1,
                                 height: 60,
-                                color: AppColors.border,
+                                color: Theme.of(context).colorScheme.outline,
                               ),
                               Expanded(
-                                child: _buildStatItem('Tasks', '5',
-                                    Icons.task_alt, AppColors.danger, 2),
+                                child: _buildStatItem('Tasks', '5', 'tasks',
+                                    Theme.of(context).colorScheme.tertiary, 2),
                               ),
                             ],
                           ),
@@ -739,8 +713,8 @@ class _DashboardTabState extends State<DashboardTab>
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color,
-      int animationIndex) {
+  Widget _buildStatItem(String label, String value, String iconType,
+      Color color, int animationIndex) {
     return ScaleTransition(
       scale: Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
@@ -763,17 +737,34 @@ class _DashboardTabState extends State<DashboardTab>
               return Transform.rotate(
                 angle: animationValue * 2 * 3.14159,
                 child: Container(
-                  width: 40,
-                  height: 40,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: color.withOpacity(0.2),
-                      width: 1,
+                      width: 1.5,
                     ),
                   ),
-                  child: Icon(icon, color: color, size: 20),
+                  child: Center(
+                    child: () {
+                      switch (iconType) {
+                        case 'phone':
+                          return ExpressiveIcons.phone(
+                              size: 24.0, color: color, filled: true);
+                        case 'notifications':
+                          return ExpressiveIcons.notifications(
+                              size: 24.0, color: color, filled: true);
+                        case 'tasks':
+                          return ExpressiveIcons.tasks(
+                              size: 24.0, color: color, filled: true);
+                        default:
+                          return ExpressiveIcons.dashboard(
+                              size: 24.0, color: color, filled: true);
+                      }
+                    }(),
+                  ),
                 ),
               );
             },
@@ -788,7 +779,7 @@ class _DashboardTabState extends State<DashboardTab>
                 animatedValue.toString(),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.text,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 20,
                     ),
               );
@@ -798,7 +789,7 @@ class _DashboardTabState extends State<DashboardTab>
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.muted,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
             textAlign: TextAlign.center,
@@ -870,8 +861,136 @@ class CallsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Calls Tab - Coming Soon'),
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          elevation: 0,
+          floating: true,
+          snap: true,
+          title: const Text('Call History'),
+          actions: [
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.search),
+            ),
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.more_vert),
+            ),
+          ],
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: () {},
+                    icon: ExpressiveIcons.phone(
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                      filled: true,
+                    ),
+                    label: const Text('Recent'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.missed_video_call_outlined),
+                    label: const Text('Missed'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildCallItem(context, index),
+            childCount: 20,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCallItem(BuildContext context, int index) {
+    final callTypes = ['incoming', 'outgoing', 'missed'];
+    final callType = callTypes[index % 3];
+    final contacts = ['John Doe', 'Sarah Wilson', 'Mike Johnson', 'Emma Davis'];
+    final contact = contacts[index % 4];
+    final times = ['2 min ago', '1 hour ago', '3 hours ago', 'Yesterday'];
+    final time = times[index % 4];
+
+    IconData callIcon;
+    Color callColor;
+
+    switch (callType) {
+      case 'incoming':
+        callIcon = Icons.call_received;
+        callColor = Colors.green;
+        break;
+      case 'outgoing':
+        callIcon = Icons.call_made;
+        callColor = Colors.blue;
+        break;
+      case 'missed':
+        callIcon = Icons.call_received;
+        callColor = Colors.red;
+        break;
+      default:
+        callIcon = Icons.call;
+        callColor = Colors.grey;
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          child: Text(
+            contact[0],
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        title: Text(
+          contact,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Row(
+          children: [
+            Icon(callIcon, size: 16, color: callColor),
+            const SizedBox(width: 4),
+            Text(time),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.info_outline),
+              iconSize: 20,
+            ),
+            IconButton(
+              onPressed: () {},
+              icon: ExpressiveIcons.phone(
+                size: 18,
+                color: Theme.of(context).colorScheme.primary,
+                filled: true,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -881,8 +1000,157 @@ class NotificationsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Notifications Tab - Coming Soon'),
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          elevation: 0,
+          floating: true,
+          snap: true,
+          title: const Text('Notifications'),
+          actions: [
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.tune),
+            ),
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.more_vert),
+            ),
+          ],
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: () {},
+                    icon: ExpressiveIcons.notifications(
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                      filled: true,
+                    ),
+                    label: const Text('All'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.priority_high),
+                    label: const Text('Priority'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildNotificationItem(context, index),
+            childCount: 15,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotificationItem(BuildContext context, int index) {
+    final apps = ['WhatsApp', 'Gmail', 'Bank Alert', 'Calendar', 'Weather'];
+    final app = apps[index % 5];
+    final titles = [
+      'New message from Sarah',
+      'Meeting reminder in 30 min',
+      'Transaction alert: ₹500 debited',
+      'Flight booking confirmed',
+      'Rain expected today'
+    ];
+    final title = titles[index % 5];
+    final times = ['2 min ago', '15 min ago', '1 hour ago', '3 hours ago'];
+    final time = times[index % 4];
+
+    final priorities = [
+      PriorityLevel.high,
+      PriorityLevel.medium,
+      PriorityLevel.low
+    ];
+    final priority = priorities[index % 3];
+
+    Color priorityColor;
+    switch (priority) {
+      case PriorityLevel.high:
+        priorityColor = Colors.red;
+        break;
+      case PriorityLevel.medium:
+        priorityColor = Colors.orange;
+        break;
+      case PriorityLevel.low:
+        priorityColor = Colors.green;
+        break;
+      default:
+        priorityColor = Colors.grey;
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: priorityColor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: ExpressiveIcons.notifications(
+            size: 20,
+            color: priorityColor,
+            filled: true,
+          ),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Row(
+          children: [
+            Text(
+              app,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text('• $time'),
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: priorityColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Icon(
+              Icons.chevron_right,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+        onTap: () {
+          // Navigate to notification detail
+        },
+      ),
     );
   }
 }
@@ -892,8 +1160,229 @@ class TasksTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Tasks Tab - Coming Soon'),
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          elevation: 0,
+          floating: true,
+          snap: true,
+          title: const Text('Tasks'),
+          actions: [
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.add),
+            ),
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.more_vert),
+            ),
+          ],
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ExpressiveIcons.tasks(
+                          size: 24,
+                          color: Theme.of(context).colorScheme.primary,
+                          filled: true,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Today\'s Progress',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildProgressItem(
+                              context, 'Completed', '8', Colors.green),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildProgressItem(
+                              context, 'Pending', '3', Colors.orange),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildProgressItem(
+                              context, 'Overdue', '1', Colors.red),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.today),
+                    label: const Text('Today'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.schedule),
+                    label: const Text('Upcoming'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildTaskItem(context, index),
+            childCount: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressItem(
+      BuildContext context, String label, String count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            count,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskItem(BuildContext context, int index) {
+    final tasks = [
+      'Complete project proposal',
+      'Review design mockups',
+      'Schedule team meeting',
+      'Update documentation',
+      'Test new features',
+      'Call client for feedback',
+      'Prepare presentation',
+      'Send weekly report',
+    ];
+    final task = tasks[index % 8];
+    final completed = index % 3 == 0;
+    final priorities = [
+      PriorityLevel.high,
+      PriorityLevel.medium,
+      PriorityLevel.low
+    ];
+    final priority = priorities[index % 3];
+
+    Color priorityColor;
+    switch (priority) {
+      case PriorityLevel.high:
+        priorityColor = Colors.red;
+        break;
+      case PriorityLevel.medium:
+        priorityColor = Colors.orange;
+        break;
+      case PriorityLevel.low:
+        priorityColor = Colors.green;
+        break;
+      default:
+        priorityColor = Colors.grey;
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: Checkbox(
+          value: completed,
+          onChanged: (value) {},
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        title: Text(
+          task,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            decoration: completed ? TextDecoration.lineThrough : null,
+            color: completed
+                ? Theme.of(context).colorScheme.onSurfaceVariant
+                : Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        subtitle: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: priorityColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                priority.name.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: priorityColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Due today',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        trailing: IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.more_vert),
+          iconSize: 20,
+        ),
+      ),
     );
   }
 }
@@ -903,8 +1392,290 @@ class ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Profile Tab - Coming Soon'),
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          elevation: 0,
+          floating: true,
+          snap: true,
+          title: const Text('Profile'),
+          actions: [
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.edit),
+            ),
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.more_vert),
+            ),
+          ],
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primaryContainer,
+                          child: ExpressiveIcons.person(
+                            size: 60,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
+                            filled: true,
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.surface,
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'John Doe',
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                    ),
+                    Text(
+                      'Software Engineer',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Online',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Card(
+              child: Column(
+                children: [
+                  _buildProfileItem(
+                    context,
+                    Icons.email_outlined,
+                    'Email',
+                    'john.doe@company.com',
+                    () {},
+                  ),
+                  _buildProfileItem(
+                    context,
+                    Icons.phone_outlined,
+                    'Phone',
+                    '+1 (555) 123-4567',
+                    () {},
+                  ),
+                  _buildProfileItem(
+                    context,
+                    Icons.location_on_outlined,
+                    'Location',
+                    'San Francisco, CA',
+                    () {},
+                  ),
+                  _buildProfileItem(
+                    context,
+                    Icons.work_outline,
+                    'Department',
+                    'Engineering',
+                    () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Card(
+              child: Column(
+                children: [
+                  _buildSettingsItem(
+                    context,
+                    Icons.notifications_outlined,
+                    'Notifications',
+                    () {},
+                  ),
+                  _buildSettingsItem(
+                    context,
+                    Icons.privacy_tip_outlined,
+                    'Privacy',
+                    () {},
+                  ),
+                  _buildSettingsItem(
+                    context,
+                    Icons.security_outlined,
+                    'Security',
+                    () {},
+                  ),
+                  _buildSettingsItem(
+                    context,
+                    Icons.palette_outlined,
+                    'Theme',
+                    () {},
+                  ),
+                  _buildSettingsItem(
+                    context,
+                    Icons.language_outlined,
+                    'Language',
+                    () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Card(
+              child: Column(
+                children: [
+                  _buildSettingsItem(
+                    context,
+                    Icons.help_outline,
+                    'Help & Support',
+                    () {},
+                  ),
+                  _buildSettingsItem(
+                    context,
+                    Icons.info_outline,
+                    'About',
+                    () {},
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.logout,
+                      color: Colors.red,
+                    ),
+                    title: Text(
+                      'Sign Out',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    onTap: () {},
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+      ],
+    );
+  }
+
+  Widget _buildProfileItem(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String value,
+    VoidCallback onTap,
+  ) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(value),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildSettingsItem(
+    BuildContext context,
+    IconData icon,
+    String title,
+    VoidCallback onTap,
+  ) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      onTap: onTap,
     );
   }
 }
@@ -1032,10 +1803,10 @@ class SummarySearchDelegate extends SearchDelegate<String> {
         final result = results[index];
         return ListTile(
           leading: CircleAvatar(
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             child: Icon(
               result.contains('Call') ? Icons.phone : Icons.notifications,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
               size: 20,
             ),
           ),
@@ -1043,7 +1814,7 @@ class SummarySearchDelegate extends SearchDelegate<String> {
           subtitle: Text(
             'Result ${index + 1} of ${results.length}',
             style: TextStyle(
-              color: Colors.grey.shade600,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 12,
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:animations/animations.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
@@ -31,17 +32,28 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
-      statusBarColor: AppColors.base,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: AppColors.surface,
-      systemNavigationBarIconBrightness: Brightness.dark,
+  // System UI overlay will be updated after the first frame using app theme
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final scheme = appTheme.colorScheme;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: scheme.background,
+        statusBarIconBrightness: scheme.brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+        systemNavigationBarColor: scheme.surface,
+        systemNavigationBarIconBrightness: scheme.brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+      ),
+    );
+  });
+
+  runApp(
+    ProviderScope(
+      child: const UACCApp(),
     ),
   );
-
-  runApp(const UACCApp());
 }
 
 class UACCApp extends StatelessWidget {
