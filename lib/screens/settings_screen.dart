@@ -1,6 +1,5 @@
 // lib/screens/settings_screen.dart
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -218,7 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           scale: value,
           child: Card(
             elevation: 8,
-            shadowColor: AppColors.shadow.withOpacity(0.2),
+            shadowColor: Theme.of(context).colorScheme.shadow.withOpacity(0.2),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -227,8 +226,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 borderRadius: BorderRadius.circular(20),
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.05),
-                    AppColors.accent.withOpacity(0.05),
+                    Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                    Theme.of(context).colorScheme.secondary.withOpacity(0.05),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -252,15 +251,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 colors: [
-                                  AppColors.primary,
-                                  AppColors.accent,
+                                  Theme.of(context).colorScheme.primary,
+                                  Theme.of(context).colorScheme.secondary,
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.3),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.3),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
@@ -287,7 +289,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 .titleLarge
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.text,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                           ),
                           const SizedBox(height: 4),
@@ -297,7 +300,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  color: AppColors.muted,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
                                 ),
                           ),
                           const SizedBox(height: 12),
@@ -308,14 +313,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  AppColors.success,
-                                  AppColors.success.withOpacity(0.8),
+                                  Theme.of(context).colorScheme.tertiary,
+                                  Theme.of(context)
+                                      .colorScheme
+                                      .tertiary
+                                      .withOpacity(0.8),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.success.withOpacity(0.3),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .tertiary
+                                      .withOpacity(0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -342,14 +353,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                           scale: animValue,
                           child: Container(
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
                               onPressed: _editProfile,
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.edit,
-                                color: AppColors.primary,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               iconSize: 24,
                             ),
@@ -374,7 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
       ),
     );
@@ -389,7 +403,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             subtitle: const Text('Use fingerprint or face ID to unlock app'),
             value: _biometricEnabled,
             onChanged: (value) => setState(() => _biometricEnabled = value),
-            activeColor: AppColors.primary,
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
           const Divider(height: 1),
           ListTile(
@@ -398,13 +412,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.15),
+                color: Theme.of(context).colorScheme.tertiary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 'Active',
                 style: TextStyle(
-                  color: AppColors.success,
+                  color: Theme.of(context).colorScheme.tertiary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -436,7 +450,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             subtitle: const Text('Automatically record calls for analysis'),
             value: _callRecordingEnabled,
             onChanged: (value) => setState(() => _callRecordingEnabled = value),
-            activeColor: AppColors.primary,
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
           const Divider(height: 1),
           ListTile(
@@ -451,7 +465,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             subtitle: const Text('Automatically generate call summaries'),
             value: _autoSummarize,
             onChanged: (value) => setState(() => _autoSummarize = value),
-            activeColor: AppColors.primary,
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
           const Divider(height: 1),
           ListTile(
@@ -474,7 +488,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             subtitle: const Text('Get AI-powered notification summaries'),
             value: _notificationsEnabled,
             onChanged: (value) => setState(() => _notificationsEnabled = value),
-            activeColor: AppColors.primary,
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
           const Divider(height: 1),
           ListTile(
@@ -522,7 +536,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   max: 3.0,
                   divisions: 2,
                   label: _getSummarizationLabel(_summarizationLevel),
-                  activeColor: AppColors.primary,
+                  activeColor: Theme.of(context).colorScheme.primary,
                   onChanged: (value) =>
                       setState(() => _summarizationLevel = value),
                 ),
@@ -544,7 +558,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             subtitle: const Text('Process data locally when possible'),
             value: _offlineMode,
             onChanged: (value) => setState(() => _offlineMode = value),
-            activeColor: AppColors.primary,
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
         ],
       ),
@@ -567,7 +581,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             subtitle: const Text('Use dark theme'),
             value: _darkModeEnabled,
             onChanged: (value) => setState(() => _darkModeEnabled = value),
-            activeColor: AppColors.primary,
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
           const Divider(height: 1),
           ListTile(
@@ -608,7 +622,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             subtitle: const Text('Help improve the app with usage data'),
             value: _shareAnalytics,
             onChanged: (value) => setState(() => _shareAnalytics = value),
-            activeColor: AppColors.primary,
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
           const Divider(height: 1),
           ListTile(
@@ -653,7 +667,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   (index) => Icon(
                         Icons.star,
                         size: 16,
-                        color: AppColors.accent,
+                        color: Theme.of(context).colorScheme.secondary,
                       )),
             ),
             onTap: _rateApp,
@@ -666,16 +680,16 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildSignOutSection() {
     return Card(
       child: ListTile(
-        title: const Text(
+        title: Text(
           'Sign Out',
           style: TextStyle(
-            color: AppColors.danger,
+            color: Theme.of(context).colorScheme.error,
             fontWeight: FontWeight.w600,
           ),
         ),
-        leading: const Icon(
+        leading: Icon(
           Icons.logout,
-          color: AppColors.danger,
+          color: Theme.of(context).colorScheme.error,
         ),
         onTap: _signOut,
       ),
@@ -724,7 +738,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 setState(() => _voiceQuality = value!);
                 Navigator.pop(context);
               },
-              activeColor: AppColors.primary,
+              activeColor: Theme.of(context).colorScheme.primary,
             );
           }).toList(),
         ),
@@ -764,7 +778,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 setState(() => _selectedLanguage = value!);
                 Navigator.pop(context);
               },
-              activeColor: AppColors.primary,
+              activeColor: Theme.of(context).colorScheme.primary,
             );
           }).toList(),
         ),
@@ -816,7 +830,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Cache cleared successfully'),
-                  backgroundColor: AppColors.success,
+                  backgroundColor: Theme.of(context).colorScheme.tertiary,
                 ),
               );
             },
@@ -863,7 +877,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 (route) => false,
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Sign Out'),
           ),
         ],

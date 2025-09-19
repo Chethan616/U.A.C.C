@@ -1,6 +1,5 @@
 // lib/screens/notification_detail_screen.dart
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 import '../models/enums.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/priority_badge.dart';
@@ -178,8 +177,8 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   widget.notificationData.isRead ? 'Read' : 'Unread',
                   style: TextStyle(
                     color: widget.notificationData.isRead
-                        ? AppColors.success
-                        : AppColors.accent,
+                        ? Theme.of(context).colorScheme.tertiary
+                        : Theme.of(context).colorScheme.secondary,
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
@@ -205,7 +204,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                 children: [
                   Icon(
                     Icons.auto_awesome,
-                    color: AppColors.accent,
+                    color: Theme.of(context).colorScheme.secondary,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -236,9 +235,11 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   _buildAnalysisChip('Urgency', widget.notificationData.urgency,
                       _getUrgencyColor(widget.notificationData.urgency)),
                   if (widget.notificationData.requiresAction)
-                    _buildAnalysisChip('Action Required', '', AppColors.danger),
+                    _buildAnalysisChip('Action Required', '',
+                        Theme.of(context).colorScheme.error),
                   if (widget.notificationData.containsPersonalInfo)
-                    _buildAnalysisChip('Personal Info', '', AppColors.accent),
+                    _buildAnalysisChip('Personal Info', '',
+                        Theme.of(context).colorScheme.secondary),
                 ],
               ),
             ],
@@ -272,7 +273,8 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                       .scaffoldBackgroundColor
                       .withOpacity(0.5),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.outline),
+                  border:
+                      Border.all(color: Theme.of(context).colorScheme.outline),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,7 +336,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                         setState(() => _isActionExpanded = !_isActionExpanded),
                     icon: Icon(
                       _isActionExpanded ? Icons.expand_less : Icons.expand_more,
-                      color: AppColors.muted,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -379,7 +381,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                 Text(
                   'No specific actions recommended',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.muted,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontStyle: FontStyle.italic,
                       ),
                 ),
@@ -413,10 +415,13 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   children: [
                     ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: AppColors.muted.withOpacity(0.15),
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withOpacity(0.15),
                         child: Icon(
                           _getAppIcon(related.appName),
-                          color: AppColors.muted,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           size: 20,
                         ),
                       ),
@@ -517,7 +522,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
           FloatingActionButton(
             heroTag: "mark_read",
             onPressed: _markAsRead,
-            backgroundColor: AppColors.success,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
             child: const Icon(Icons.mark_email_read),
           ),
         const SizedBox(height: 16),
@@ -526,14 +531,15 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
           onPressed: _createTask,
           icon: const Icon(Icons.add_task),
           label: const Text('Create Task'),
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.text,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
         ),
       ],
     );
   }
 
   Color _getAppColor(String appName) {
+    final colorScheme = Theme.of(context).colorScheme;
     switch (appName.toLowerCase()) {
       case 'whatsapp':
         return Colors.green;
@@ -546,12 +552,12 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         return Colors.blue;
       case 'gpay':
       case 'payment':
-        return AppColors.accent;
+        return colorScheme.secondary;
       case 'bank':
       case 'sbi':
-        return AppColors.primary;
+        return colorScheme.primary;
       default:
-        return AppColors.muted;
+        return colorScheme.onSurfaceVariant;
     }
   }
 
@@ -580,24 +586,26 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   }
 
   Color _getSentimentColor(String sentiment) {
+    final colorScheme = Theme.of(context).colorScheme;
     switch (sentiment.toLowerCase()) {
       case 'positive':
-        return AppColors.success;
+        return colorScheme.tertiary;
       case 'negative':
-        return AppColors.danger;
+        return colorScheme.error;
       default:
-        return AppColors.accent;
+        return colorScheme.secondary;
     }
   }
 
   Color _getUrgencyColor(String urgency) {
+    final colorScheme = Theme.of(context).colorScheme;
     switch (urgency.toLowerCase()) {
       case 'high':
-        return AppColors.danger;
+        return colorScheme.error;
       case 'medium':
-        return AppColors.accent;
+        return colorScheme.secondary;
       default:
-        return AppColors.success;
+        return colorScheme.tertiary;
     }
   }
 
@@ -641,7 +649,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Executing: ${action.title}'),
-        backgroundColor: AppColors.success,
+        backgroundColor: Theme.of(context).colorScheme.tertiary,
       ),
     );
   }
@@ -656,7 +664,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Note saved'),
-          backgroundColor: AppColors.success,
+          backgroundColor: Theme.of(context).colorScheme.tertiary,
         ),
       );
     }
@@ -689,7 +697,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Marked as read'),
-        backgroundColor: AppColors.success,
+        backgroundColor: Theme.of(context).colorScheme.tertiary,
       ),
     );
   }

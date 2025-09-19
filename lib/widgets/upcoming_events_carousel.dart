@@ -116,12 +116,14 @@ class _UpcomingEventsCarouselState extends State<UpcomingEventsCarousel> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
       child: Card(
-        elevation: 4,
-        shadowColor: Theme.of(context).colorScheme.shadow.withOpacity(0.15),
+        // use a lighter elevation for M3 feel and theme shadow
+        elevation: 1,
+        shadowColor: Theme.of(context).shadowColor.withOpacity(0.06),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+            // match other cards (calendar) by using colorScheme.outline
+            color: Theme.of(context).colorScheme.outline,
             width: 1,
           ),
         ),
@@ -262,24 +264,27 @@ class _UpcomingEventsCarouselState extends State<UpcomingEventsCarousel> {
                     ),
                   ),
                   const Spacer(),
-                  GestureDetector(
-                    onTap: () => _viewEventDetails(event),
-                    child: Container(
+                  OutlinedButton(
+                    onPressed: () => _viewEventDetails(event),
+                    style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 4,
+                        vertical: 6,
                       ),
-                      decoration: BoxDecoration(
-                        color: event.color.withOpacity(0.1),
+                      minimumSize: const Size(0, 0),
+                      side: BorderSide(
+                        color: event.color.withOpacity(0.15),
+                      ),
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
-                        'View',
-                        style: TextStyle(
-                          color: event.color,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+                    child: Text(
+                      'View',
+                      style: TextStyle(
+                        color: event.color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),

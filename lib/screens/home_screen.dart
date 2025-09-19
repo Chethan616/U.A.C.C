@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
 import '../models/enums.dart';
 import '../services/auth_service.dart';
@@ -192,19 +191,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 _buildQuickAction(
                   'Add Call',
                   Icons.phone_outlined,
-                  AppColors.primary,
+                  Theme.of(context).colorScheme.primary,
                   () => Navigator.pop(context),
                 ),
                 _buildQuickAction(
                   'Add Task',
                   Icons.task_alt_outlined,
-                  AppColors.accent,
+                  Theme.of(context).colorScheme.secondary,
                   () => Navigator.pop(context),
                 ),
                 _buildQuickAction(
                   'Add Note',
                   Icons.note_add_outlined,
-                  AppColors.success,
+                  Theme.of(context).colorScheme.tertiary,
                   () => Navigator.pop(context),
                 ),
               ],
@@ -247,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Text(
               label,
               style: TextStyle(
-                color: AppColors.text,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -331,7 +330,7 @@ class _DashboardTabState extends State<DashboardTab>
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: _refreshData,
-      color: AppColors.primary,
+      color: Theme.of(context).colorScheme.primary,
       child: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -436,8 +435,8 @@ class _DashboardTabState extends State<DashboardTab>
                           child: Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.danger,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.error,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -776,13 +775,13 @@ class _DashboardTabState extends State<DashboardTab>
   Color _getPriorityColor(PriorityLevel priority) {
     switch (priority) {
       case PriorityLevel.urgent:
-        return Colors.red.shade700;
+        return Theme.of(context).colorScheme.error;
       case PriorityLevel.high:
-        return AppColors.danger;
+        return Theme.of(context).colorScheme.error;
       case PriorityLevel.medium:
-        return AppColors.accent;
+        return Theme.of(context).colorScheme.secondary;
       case PriorityLevel.low:
-        return AppColors.success;
+        return Theme.of(context).colorScheme.tertiary;
     }
   }
 
@@ -792,7 +791,7 @@ class _DashboardTabState extends State<DashboardTab>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Dashboard refreshed'),
-          backgroundColor: AppColors.success,
+          backgroundColor: Theme.of(context).colorScheme.tertiary,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -1995,15 +1994,15 @@ class SummarySearchDelegate extends SearchDelegate<String> {
   ThemeData appBarTheme(BuildContext context) {
     return Theme.of(context).copyWith(
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.text,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 1,
-        shadowColor: AppColors.shadow.withOpacity(0.1),
+        shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.1),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: InputBorder.none,
         hintStyle: TextStyle(
-          color: AppColors.muted,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 16,
         ),
       ),
@@ -2015,7 +2014,7 @@ class SummarySearchDelegate extends SearchDelegate<String> {
     return [
       IconButton(
         onPressed: () => query = '',
-        icon: Icon(Icons.clear, color: AppColors.text),
+        icon: Icon(Icons.clear, color: Theme.of(context).colorScheme.onSurface),
         tooltip: 'Clear search',
       ),
     ];
@@ -2025,7 +2024,8 @@ class SummarySearchDelegate extends SearchDelegate<String> {
   Widget buildLeading(BuildContext context) {
     return IconButton(
       onPressed: () => close(context, ''),
-      icon: Icon(Icons.arrow_back, color: AppColors.text),
+      icon: Icon(Icons.arrow_back,
+          color: Theme.of(context).colorScheme.onSurface),
     );
   }
 
@@ -2150,17 +2150,17 @@ class SummarySearchDelegate extends SearchDelegate<String> {
     ];
 
     return Container(
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       child: ListView.builder(
         itemCount: suggestions.length,
         itemBuilder: (context, index) {
           final suggestion = suggestions[index];
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               child: Icon(
                 suggestion.icon,
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
                 size: 20,
               ),
             ),

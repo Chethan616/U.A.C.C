@@ -1,6 +1,5 @@
 // lib/screens/notifications_screen.dart
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 import '../models/enums.dart';
 import 'notification_detail_screen.dart';
 
@@ -258,10 +257,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                           },
                           backgroundColor:
                               Theme.of(context).colorScheme.surface,
-                          selectedColor: AppColors.primary.withOpacity(0.2),
+                          selectedColor:
+                              Theme.of(context).colorScheme.primaryContainer,
                           labelStyle: TextStyle(
                             color: isSelected
-                                ? Theme.of(context).colorScheme.onSurface
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer
                                 : Theme.of(context)
                                     .colorScheme
                                     .onSurfaceVariant,
@@ -272,8 +274,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                             borderRadius: BorderRadius.circular(20),
                             side: BorderSide(
                               color: isSelected
-                                  ? AppColors.primary
-                                  : AppColors.border,
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.outline,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -360,13 +362,16 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: notificationItem.isReadLocal
-                      ? AppColors.outline
-                      : AppColors.primary.withOpacity(0.8),
+                      ? Theme.of(context).colorScheme.outline
+                      : Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.8),
                   width: notificationItem.isReadLocal ? 1.5 : 2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.shadow,
+                    color: Theme.of(context).shadowColor,
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -419,7 +424,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                     width: 8,
                                     height: 8,
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -459,13 +465,15 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.danger.withOpacity(0.1),
+                        color: Theme.of(context).colorScheme.errorContainer,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         'High Priority',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.danger,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
@@ -478,16 +486,18 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                         Icon(
                           Icons.priority_high,
                           size: 16,
-                          color: AppColors.accent,
+                          color: Theme.of(context).colorScheme.secondary,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           'Action Required',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.accent,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.secondary,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ],
                     ),
@@ -509,20 +519,26 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           Icon(
             Icons.notifications_none,
             size: 80,
-            color: AppColors.muted.withOpacity(0.5),
+            color: Theme.of(context)
+                .colorScheme
+                .onSurfaceVariant
+                .withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(
             'No notifications found',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.muted,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
             'Check back later for updates',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.muted.withOpacity(0.7),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.7),
                 ),
           ),
         ],
@@ -543,7 +559,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             curve: Curves.elasticOut,
           )),
           child: FloatingActionButton(
-            backgroundColor: AppColors.primary,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             onPressed: () {
               // Mark all as read
               setState(() {
@@ -555,7 +571,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('All notifications marked as read'),
-                  backgroundColor: AppColors.success,
+                  backgroundColor: Theme.of(context).colorScheme.tertiary,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -565,7 +581,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             },
             child: Icon(
               Icons.done_all,
-              color: AppColors.text,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
         );

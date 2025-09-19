@@ -1,6 +1,5 @@
 // lib/screens/call_detail_screen.dart
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 import '../models/enums.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/priority_badge.dart';
@@ -59,12 +58,13 @@ class _CallDetailScreenState extends State<CallDetailScreen>
 
           // Tab Bar
           Container(
-            color: AppColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             child: TabBar(
               controller: _tabController,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.muted,
-              indicatorColor: AppColors.primary,
+              labelColor: Theme.of(context).colorScheme.primary,
+              unselectedLabelColor:
+                  Theme.of(context).colorScheme.onSurfaceVariant,
+              indicatorColor: Theme.of(context).colorScheme.primary,
               tabs: const [
                 Tab(text: 'Summary', icon: Icon(Icons.summarize, size: 18)),
                 Tab(
@@ -92,15 +92,15 @@ class _CallDetailScreenState extends State<CallDetailScreen>
         onPressed: _createTask,
         icon: const Icon(Icons.add_task),
         label: const Text('Create Task'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.text,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
     );
   }
 
   Widget _buildCallHeader() {
     return Container(
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,22 +142,24 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                               : Icons.call_made,
                           size: 16,
                           color: widget.callData.isIncoming
-                              ? AppColors.success
-                              : AppColors.primary,
+                              ? Theme.of(context).colorScheme.tertiary
+                              : Theme.of(context).colorScheme.primary,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           widget.callData.phoneNumber,
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.muted,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
                         ),
                         const Spacer(),
                         Icon(
                           Icons.access_time,
                           size: 16,
-                          color: AppColors.muted,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -177,7 +179,7 @@ class _CallDetailScreenState extends State<CallDetailScreen>
               Icon(
                 Icons.calendar_today,
                 size: 16,
-                color: AppColors.muted,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 4),
               Text(
@@ -190,7 +192,7 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.15),
+                    color: Theme.of(context).colorScheme.tertiaryContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -199,13 +201,13 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                       Icon(
                         Icons.mic,
                         size: 12,
-                        color: AppColors.success,
+                        color: Theme.of(context).colorScheme.tertiary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         'Recorded',
                         style: TextStyle(
-                          color: AppColors.success,
+                          color: Theme.of(context).colorScheme.tertiary,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                         ),
@@ -237,7 +239,7 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                     children: [
                       Icon(
                         Icons.auto_awesome,
-                        color: AppColors.accent,
+                        color: Theme.of(context).colorScheme.secondary,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -254,7 +256,7 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                             setState(() => _isExpanded = !_isExpanded),
                         icon: Icon(
                           _isExpanded ? Icons.expand_less : Icons.expand_more,
-                          color: AppColors.muted,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -323,8 +325,8 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                             width: 6,
                             height: 6,
                             margin: const EdgeInsets.only(top: 8),
-                            decoration: const BoxDecoration(
-                              color: AppColors.primary,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -364,8 +366,8 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                   _buildAnalysisItem('Urgency', widget.callData.urgency,
                       _getUrgencyColor(widget.callData.urgency)),
                   const Divider(),
-                  _buildAnalysisItem(
-                      'Category', widget.callData.category, AppColors.primary),
+                  _buildAnalysisItem('Category', widget.callData.category,
+                      Theme.of(context).colorScheme.primary),
                 ],
               ),
             ),
@@ -419,8 +421,10 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                           height: 32,
                           decoration: BoxDecoration(
                             color: message.isUser
-                                ? AppColors.primary.withOpacity(0.15)
-                                : AppColors.accent.withOpacity(0.15),
+                                ? Theme.of(context).colorScheme.primaryContainer
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .secondaryContainer,
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -428,8 +432,12 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                               message.isUser ? 'Y' : 'C',
                               style: TextStyle(
                                 color: message.isUser
-                                    ? AppColors.primary
-                                    : AppColors.accent,
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSecondaryContainer,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
@@ -502,15 +510,16 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                 leading: Checkbox(
                   value: action.isCompleted,
                   onChanged: (value) => _toggleActionItem(action),
-                  activeColor: AppColors.success,
+                  activeColor: Theme.of(context).colorScheme.tertiary,
                 ),
                 title: Text(
                   action.title,
                   style: TextStyle(
                     decoration:
                         action.isCompleted ? TextDecoration.lineThrough : null,
-                    color:
-                        action.isCompleted ? AppColors.muted : AppColors.text,
+                    color: action.isCompleted
+                        ? Theme.of(context).colorScheme.onSurfaceVariant
+                        : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 subtitle: Text(
@@ -610,22 +619,22 @@ class _CallDetailScreenState extends State<CallDetailScreen>
   Color _getSentimentColor(String sentiment) {
     switch (sentiment.toLowerCase()) {
       case 'positive':
-        return AppColors.success;
+        return Theme.of(context).colorScheme.tertiary;
       case 'negative':
-        return AppColors.danger;
+        return Theme.of(context).colorScheme.error;
       default:
-        return AppColors.accent;
+        return Theme.of(context).colorScheme.secondary;
     }
   }
 
   Color _getUrgencyColor(String urgency) {
     switch (urgency.toLowerCase()) {
       case 'high':
-        return AppColors.danger;
+        return Theme.of(context).colorScheme.error;
       case 'medium':
-        return AppColors.accent;
+        return Theme.of(context).colorScheme.secondary;
       default:
-        return AppColors.success;
+        return Theme.of(context).colorScheme.tertiary;
     }
   }
 
