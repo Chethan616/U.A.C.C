@@ -101,9 +101,11 @@ class AppThemes {
   static ThemeData get originalTheme => _buildTheme(
         primaryColor: const Color(0xFFD9B88A), // from app.md
         secondaryColor: const Color(0xFFF6C84A), // from app.md
-        surfaceColor: const Color(0xFFF9E8D4), // base from app.md
+        surfaceColor:
+            const Color(0xFFF9E8D4), // base from app.md (calendar color)
         backgroundColor: const Color(0xFFFEF1E1), // original warm background
-        cardColor: const Color(0xFFFFFDF9), // surface from app.md
+        // Make cards match the calendar/base surface color in the original theme
+        cardColor: const Color(0xFFF9E8D4),
         brightness: Brightness.light,
       );
 

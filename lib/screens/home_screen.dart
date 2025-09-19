@@ -340,7 +340,7 @@ class _DashboardTabState extends State<DashboardTab>
             elevation: 0,
             floating: true,
             snap: true,
-            expandedHeight: 120,
+            expandedHeight: 140,
             flexibleSpace: FlexibleSpaceBar(
               title: FadeTransition(
                 opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -363,6 +363,7 @@ class _DashboardTabState extends State<DashboardTab>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 4),
                       Text(
                         'Good ${_getGreeting()}, Chethan',
                         style: Theme.of(context)
@@ -387,7 +388,8 @@ class _DashboardTabState extends State<DashboardTab>
                   ),
                 ),
               ),
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+              titlePadding:
+                  const EdgeInsets.only(left: 16, bottom: 16, top: 32),
             ),
             actions: [
               SlideTransition(
@@ -450,6 +452,9 @@ class _DashboardTabState extends State<DashboardTab>
           SliverToBoxAdapter(
             child: Column(
               children: [
+                // Add a bit more space between the app bar header and the
+                // stats/icon box below to improve visual separation.
+                const SizedBox(height: 16),
                 // Stats Container with staggered animation
                 SlideTransition(
                   position: Tween<Offset>(
@@ -472,11 +477,14 @@ class _DashboardTabState extends State<DashboardTab>
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Card(
                         elevation: 4,
-                        shadowColor: AppColors.shadow.withOpacity(0.1),
+                        // use theme shadow for correct light/dark behavior
+                        shadowColor:
+                            Theme.of(context).shadowColor.withOpacity(0.1),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                           side: BorderSide(
-                            color: AppColors.outline.withOpacity(0.2),
+                            // match the calendar outline exactly (no extra opacity)
+                            color: Theme.of(context).colorScheme.outline,
                             width: 1.0,
                           ),
                         ),
