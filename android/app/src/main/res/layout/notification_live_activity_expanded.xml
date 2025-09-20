@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/transparent">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@android:drawable/ic_menu_call"
+            android:tint="#FF3B30"
+            android:layout_marginEnd="12dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📞 Call Transcription"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <View
+            android:id="@+id/expanded_recording_indicator"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@drawable/recording_indicator" />
+
+    </LinearLayout>
+
+    <!-- Transcript Content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="12dp"
+        android:padding="12dp"
+        android:background="@drawable/transcript_background">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🗣️ Live Transcript"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:alpha="0.7"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/expanded_transcript_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Listening for speech..."
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:layout_marginTop="8dp"
+            android:maxLines="4"
+            android:ellipsize="end"
+            android:lineSpacingExtra="2dp" />
+
+    </LinearLayout>
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/view_in_app_button"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="View in App"
+            android:textSize="12sp"
+            android:textColor="@android:color/white"
+            android:background="@drawable/button_background"
+            android:padding="8dp" />
+
+    </LinearLayout>
+
+</LinearLayout>
