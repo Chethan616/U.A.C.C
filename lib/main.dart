@@ -12,7 +12,6 @@ import 'screens/home_screen.dart';
 import 'screens/call_detail_screen.dart';
 import 'screens/notification_detail_screen.dart';
 import 'screens/notifications_screen.dart';
-import 'screens/settings_screen.dart';
 import 'screens/register_screen.dart';
 import 'widgets/app_initializer.dart';
 import 'screens/full_calendar_screen.dart';
@@ -102,8 +101,6 @@ class UACCApp extends ConsumerWidget {
             );
           case '/full-calendar':
             return AnimatedRoutes.scaleFromCenter(const FullCalendarScreen());
-          case '/settings':
-            return AnimatedRoutes.slideFromBottom(const SettingsScreen());
           case '/call-detail':
             final args = settings.arguments;
             Widget screen;

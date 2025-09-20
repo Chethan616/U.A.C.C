@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/theme_provider.dart';
 import '../models/enums.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/upcoming_events_carousel.dart';
 import 'package:intl/intl.dart';
+import 'profile_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -257,14 +259,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 }
 
-class DashboardTab extends StatefulWidget {
+class DashboardTab extends ConsumerStatefulWidget {
   const DashboardTab({Key? key}) : super(key: key);
 
   @override
-  State<DashboardTab> createState() => _DashboardTabState();
+  ConsumerState<DashboardTab> createState() => _DashboardTabState();
 }
 
-class _DashboardTabState extends State<DashboardTab>
+class _DashboardTabState extends ConsumerState<DashboardTab>
     with TickerProviderStateMixin {
   late AnimationController _dashboardController;
   late AnimationController _cardController;
@@ -363,16 +365,53 @@ class _DashboardTabState extends State<DashboardTab>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 4),
-                      Text(
-                        'Good ${_getGreeting()}, Chethan',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final userProfile =
+                              ref.watch(currentUserProfileProvider);
+                          return userProfile.when(
+                            data: (user) {
+                              final firstName = user?.firstName ?? 'User';
+                              return Text(
+                                'Good ${_getGreeting()}, $firstName',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                    ),
+                              );
+                            },
+                            loading: () => Text(
+                              'Good ${_getGreeting()}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
                             ),
+                            error: (_, __) => Text(
+                              'Good ${_getGreeting()}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
+                            ),
+                          );
+                        },
                       ),
                       Text(
                         'Here\'s your daily summary',
@@ -1343,679 +1382,30 @@ class TasksTab extends StatelessWidget {
   }
 }
 
-class ProfileTab extends ConsumerWidget {
-  const ProfileTab({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final userAsync = ref.watch(currentUserProvider);
-
-    return userAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text('Error loading profile'),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => ref.invalidate(currentUserProvider),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
-      data: (user) => CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            foregroundColor: Theme.of(context).colorScheme.onSurface,
-            elevation: 0,
-            floating: true,
-            snap: true,
-            title: const Text('Profile'),
-            actions: [
-              IconButton(
-                onPressed: () {
-                  _showEditProfile(context, ref);
-                },
-                icon: const Icon(Icons.edit),
-              ),
-              IconButton(
-                onPressed: () {
-                  _showMoreOptions(context, ref);
-                },
-                icon: const Icon(Icons.more_vert),
-              ),
-            ],
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundImage: user?.photoURL != null
-                                ? NetworkImage(user!.photoURL!)
-                                : null,
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primaryContainer,
-                            child: user?.photoURL == null
-                                ? Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimaryContainer,
-                                  )
-                                : null,
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.surface,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Icon(
-                                Icons.camera_alt,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        user?.displayName ?? 'No name',
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                      Text(
-                        user?.email ?? 'No email',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Online',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                child: Column(
-                  children: [
-                    _buildProfileItem(
-                      context,
-                      Icons.email_outlined,
-                      'Email',
-                      user?.email ?? 'Not provided',
-                      () {},
-                    ),
-                    _buildProfileItem(
-                      context,
-                      Icons.person_outline,
-                      'Display Name',
-                      user?.displayName ?? 'Not set',
-                      () {},
-                    ),
-                    _buildProfileItem(
-                      context,
-                      Icons.verified_user_outlined,
-                      'Email Verified',
-                      user?.emailVerified == true ? 'Yes' : 'No',
-                      () {},
-                    ),
-                    _buildProfileItem(
-                      context,
-                      Icons.access_time_outlined,
-                      'Member Since',
-                      user?.metadata.creationTime != null
-                          ? _formatDate(user!.metadata.creationTime!)
-                          : 'Unknown',
-                      () {},
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 16)),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                child: Column(
-                  children: [
-                    _buildSettingsItem(
-                      context,
-                      Icons.notifications_outlined,
-                      'Notifications',
-                      () {},
-                    ),
-                    _buildSettingsItem(
-                      context,
-                      Icons.privacy_tip_outlined,
-                      'Privacy',
-                      () {},
-                    ),
-                    _buildSettingsItem(
-                      context,
-                      Icons.security_outlined,
-                      'Security',
-                      () {},
-                    ),
-                    _buildSettingsItem(
-                      context,
-                      Icons.palette_outlined,
-                      'Theme',
-                      () => _showThemeSelector(context, ref),
-                    ),
-                    _buildSettingsItem(
-                      context,
-                      Icons.language_outlined,
-                      'Language',
-                      () {},
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 16)),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                child: Column(
-                  children: [
-                    _buildSettingsItem(
-                      context,
-                      Icons.help_outline,
-                      'Help & Support',
-                      () {},
-                    ),
-                    _buildSettingsItem(
-                      context,
-                      Icons.info_outline,
-                      'About',
-                      () {},
-                    ),
-                    ListTile(
-                      leading: Icon(
-                        Icons.logout,
-                        color: Colors.red,
-                      ),
-                      title: Text(
-                        'Sign Out',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      onTap: () => _showSignOutDialog(context, ref),
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        color: Colors.red,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileItem(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String value,
-    VoidCallback onTap,
-  ) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      subtitle: Text(value),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildSettingsItem(
-    BuildContext context,
-    IconData icon,
-    String title,
-    VoidCallback onTap,
-  ) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-      onTap: onTap,
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return DateFormat('MMM d, yyyy').format(date);
-  }
-
-  void _showEditProfile(BuildContext context, WidgetRef ref) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit profile feature coming soon!')),
-    );
-  }
-
-  void _showMoreOptions(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.download),
-                title: const Text('Export Profile Data'),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Export feature coming soon!')),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_forever),
-                title: const Text('Delete Account'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showDeleteAccountDialog(context, ref);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Account'),
-          content: const Text(
-            'Are you sure you want to permanently delete your account? This action cannot be undone.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                try {
-                  final authService = ref.read(authServiceProvider);
-                  await authService.deleteAccount();
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error deleting account: $e')),
-                  );
-                }
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showSignOutDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Sign Out'),
-          content: const Text('Are you sure you want to sign out?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                try {
-                  final authService = ref.read(authServiceProvider);
-                  await authService.signOut();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Signed out successfully')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error signing out: $e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Sign Out'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showThemeSelector(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
-              ),
-              child: Column(
-                children: [
-                  // Handle
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant
-                          .withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  // Title
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.palette,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Choose Theme',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Theme Options
-                  Expanded(
-                    child: Consumer(
-                      builder: (context, ref, child) {
-                        final currentTheme = ref.watch(themeProvider);
-                        return ListView.builder(
-                          controller: scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: AppThemeMode.values.length,
-                          itemBuilder: (context, index) {
-                            final theme = AppThemeMode.values[index];
-                            final isSelected = currentTheme == theme;
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer
-                                        .withValues(alpha: 0.3)
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(12),
-                                border: isSelected
-                                    ? Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        width: 2,
-                                      )
-                                    : null,
-                              ),
-                              child: ListTile(
-                                leading: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: theme.primaryColor,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .outline
-                                          .withValues(alpha: 0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    theme.icon,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                title: Text(
-                                  theme.displayName,
-                                  style: TextStyle(
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.w500,
-                                    color: isSelected
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  isSelected
-                                      ? 'Currently active'
-                                      : 'Tap to apply',
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withValues(alpha: 0.8)
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                trailing: isSelected
-                                    ? Icon(
-                                        Icons.check_circle,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                      )
-                                    : const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  if (!isSelected) {
-                                    ref
-                                        .read(themeProvider.notifier)
-                                        .setTheme(theme);
-                                  }
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  // Bottom padding
-                  const SizedBox(height: 20),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-// Data Models
-enum SummaryType { call, notification }
-
-class SummaryItem {
+class SearchQuery {
   final String title;
-  final String summary;
   final String subtitle;
-  final SummaryType type;
-  final PriorityLevel priority;
+  final IconData icon;
+  final String query;
 
-  SummaryItem({
+  const SearchQuery({
     required this.title,
-    required this.summary,
     required this.subtitle,
-    required this.type,
-    required this.priority,
+    required this.icon,
+    required this.query,
   });
 }
 
-// Search Delegate
-class SummarySearchDelegate extends SearchDelegate<String> {
-  @override
-  String get searchFieldLabel => 'Search calls and notifications...';
-
-  @override
-  ThemeData appBarTheme(BuildContext context) {
-    return Theme.of(context).copyWith(
-      appBarTheme: AppBarTheme(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        elevation: 1,
-        shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: InputBorder.none,
-        hintStyle: TextStyle(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          fontSize: 16,
-        ),
-      ),
-    );
-  }
-
+// Dummy search delegate class to avoid errors
+class SummarySearchDelegate extends SearchDelegate {
   @override
   List<Widget> buildActions(BuildContext context) {
     return [
       IconButton(
-        onPressed: () => query = '',
-        icon: Icon(Icons.clear, color: Theme.of(context).colorScheme.onSurface),
-        tooltip: 'Clear search',
+        icon: const Icon(Icons.clear),
+        onPressed: () {
+          query = '';
+        },
       ),
     ];
   }
@@ -2023,186 +1413,20 @@ class SummarySearchDelegate extends SearchDelegate<String> {
   @override
   Widget buildLeading(BuildContext context) {
     return IconButton(
-      onPressed: () => close(context, ''),
-      icon: Icon(Icons.arrow_back,
-          color: Theme.of(context).colorScheme.onSurface),
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    if (query.isEmpty) {
-      return const Center(
-        child: Text(
-          'Enter a search term to find calls and notifications',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey,
-          ),
-        ),
-      );
-    }
-
-    // Mock search results - in a real app, this would be actual search data
-    final results = [
-      'Business Meeting with John',
-      'Payment Reminder - GPay',
-      'Call from Mom',
-      'WhatsApp message from Team',
-    ]
-        .where((item) => item.toLowerCase().contains(query.toLowerCase()))
-        .toList();
-
-    if (results.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No results found for "$query"',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try searching with different keywords',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: results.length,
-      itemBuilder: (context, index) {
-        final result = results[index];
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            child: Icon(
-              result.contains('Call') ? Icons.phone : Icons.notifications,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-              size: 20,
-            ),
-          ),
-          title: Text(result),
-          subtitle: Text(
-            'Result ${index + 1} of ${results.length}',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 12,
-            ),
-          ),
-          onTap: () {
-            close(context, result);
-            // Handle result selection
-          },
-        );
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, null);
       },
     );
   }
 
   @override
-  Widget buildSuggestions(BuildContext context) {
-    final suggestions = [
-      SearchSuggestion(
-        title: 'Recent calls',
-        subtitle: 'View all call summaries',
-        icon: Icons.phone,
-        query: 'calls',
-      ),
-      SearchSuggestion(
-        title: 'Notifications',
-        subtitle: 'Find notification summaries',
-        icon: Icons.notifications,
-        query: 'notifications',
-      ),
-      SearchSuggestion(
-        title: 'High priority',
-        subtitle: 'Important items only',
-        icon: Icons.priority_high,
-        query: 'high priority',
-      ),
-      SearchSuggestion(
-        title: 'Business',
-        subtitle: 'Work-related content',
-        icon: Icons.business,
-        query: 'business',
-      ),
-      SearchSuggestion(
-        title: 'Today',
-        subtitle: 'Items from today',
-        icon: Icons.today,
-        query: 'today',
-      ),
-    ];
-
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: ListView.builder(
-        itemCount: suggestions.length,
-        itemBuilder: (context, index) {
-          final suggestion = suggestions[index];
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                suggestion.icon,
-                color: Theme.of(context).colorScheme.primary,
-                size: 20,
-              ),
-            ),
-            title: Text(
-              suggestion.title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            subtitle: Text(
-              suggestion.subtitle,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 13,
-              ),
-            ),
-            trailing: Icon(
-              Icons.north_west,
-              color: Colors.grey.shade400,
-              size: 16,
-            ),
-            onTap: () {
-              query = suggestion.query;
-              showResults(context);
-            },
-          );
-        },
-      ),
-    );
+  Widget buildResults(BuildContext context) {
+    return const Center(child: Text('Search results will appear here'));
   }
-}
 
-class SearchSuggestion {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final String query;
-
-  SearchSuggestion({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.query,
-  });
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return const Center(child: Text('Search suggestions'));
+  }
 }

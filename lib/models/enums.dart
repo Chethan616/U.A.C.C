@@ -10,6 +10,16 @@ enum PriorityLevel {
   final String label;
 }
 
+enum SummaryType {
+  call('Call'),
+  notification('Notification'),
+  task('Task'),
+  note('Note');
+
+  const SummaryType(this.label);
+  final String label;
+}
+
 enum CallType {
   incoming('Incoming'),
   outgoing('Outgoing'),
@@ -72,4 +82,20 @@ enum UrgencyLevel {
 
   const UrgencyLevel(this.label);
   final String label;
+}
+
+class SummaryItem {
+  final String title;
+  final String summary;
+  final String subtitle;
+  final SummaryType type;
+  final PriorityLevel priority;
+
+  const SummaryItem({
+    required this.title,
+    required this.summary,
+    required this.subtitle,
+    required this.type,
+    required this.priority,
+  });
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 import '../screens/login_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/profile_completion_screen.dart';
 
 class AuthWrapper extends ConsumerWidget {
   const AuthWrapper({Key? key}) : super(key: key);
@@ -53,7 +55,25 @@ class AuthWrapper extends ConsumerWidget {
       ),
       data: (user) {
         if (user != null) {
-          return const HomeScreen();
+          // Check if user profile is complete
+          final userProfileAsync = ref.watch(currentUserProfileProvider);
+          return userProfileAsync.when(
+            loading: () => const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (error, stackTrace) => const HomeScreen(),
+            data: (userProfile) {
+              if (userProfile == null || !userProfile.profileCompleted) {
+                // Profile not complete, show completion screen
+                return const ProfileCompletionScreen();
+              } else {
+                // Profile complete, show home screen
+                return const HomeScreen();
+              }
+            },
+          );
         } else {
           return const LoginScreen();
         }

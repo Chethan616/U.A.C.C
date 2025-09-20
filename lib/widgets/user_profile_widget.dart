@@ -68,21 +68,9 @@ class UserProfileWidget extends StatelessWidget {
             onSelected: (value) async {
               if (value == 'logout') {
                 await _showLogoutDialog(context);
-              } else if (value == 'profile') {
-                Navigator.pushNamed(context, '/settings');
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_outline),
-                    SizedBox(width: 8),
-                    Text('Profile Settings'),
-                  ],
-                ),
-              ),
               const PopupMenuItem(
                 value: 'logout',
                 child: Row(

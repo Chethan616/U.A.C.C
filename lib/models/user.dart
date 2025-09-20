@@ -1,62 +1,111 @@
 // lib/models/user.dart
 class User {
   final String uid;
-  final String displayName;
+  final String firstName;
+  final String lastName;
   final String email;
+  final String? phoneNumber;
+  final DateTime? dateOfBirth;
   final String? photoURL;
+  final DateTime? lastPhotoUpdate;
   final UserSettings settings;
   final DateTime createdAt;
   final DateTime lastLoginAt;
+  final bool profileCompleted;
+  final bool isGoogleUser;
 
   User({
     required this.uid,
-    required this.displayName,
+    required this.firstName,
+    required this.lastName,
     required this.email,
+    this.phoneNumber,
+    this.dateOfBirth,
     this.photoURL,
+    this.lastPhotoUpdate,
     required this.settings,
     required this.createdAt,
     required this.lastLoginAt,
+    this.profileCompleted = false,
+    this.isGoogleUser = false,
   });
+
+  String get displayName => '$firstName $lastName'.trim();
+
+  bool get canUpdatePhoto {
+    if (lastPhotoUpdate == null) return true;
+    final daysSinceLastUpdate =
+        DateTime.now().difference(lastPhotoUpdate!).inDays;
+    return daysSinceLastUpdate >= 45;
+  }
 
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
-      'displayName': displayName,
+      'firstName': firstName,
+      'lastName': lastName,
       'email': email,
+      'phoneNumber': phoneNumber,
+      'dateOfBirth': dateOfBirth?.millisecondsSinceEpoch,
       'photoURL': photoURL,
+      'lastPhotoUpdate': lastPhotoUpdate?.millisecondsSinceEpoch,
       'settings': settings.toMap(),
       'createdAt': createdAt.millisecondsSinceEpoch,
       'lastLoginAt': lastLoginAt.millisecondsSinceEpoch,
+      'profileCompleted': profileCompleted,
+      'isGoogleUser': isGoogleUser,
     };
   }
 
   factory User.fromMap(Map<String, dynamic> map, String documentId) {
     return User(
       uid: documentId,
-      displayName: map['displayName'] ?? '',
+      firstName: map['firstName'] ?? '',
+      lastName: map['lastName'] ?? '',
       email: map['email'] ?? '',
+      phoneNumber: map['phoneNumber'],
+      dateOfBirth: map['dateOfBirth'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['dateOfBirth'])
+          : null,
       photoURL: map['photoURL'],
+      lastPhotoUpdate: map['lastPhotoUpdate'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['lastPhotoUpdate'])
+          : null,
       settings: UserSettings.fromMap(map['settings'] ?? {}),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
       lastLoginAt: DateTime.fromMillisecondsSinceEpoch(map['lastLoginAt'] ?? 0),
+      profileCompleted: map['profileCompleted'] ?? false,
+      isGoogleUser: map['isGoogleUser'] ?? false,
     );
   }
 
   User copyWith({
-    String? displayName,
+    String? firstName,
+    String? lastName,
     String? email,
+    String? phoneNumber,
+    DateTime? dateOfBirth,
     String? photoURL,
+    DateTime? lastPhotoUpdate,
     UserSettings? settings,
     DateTime? lastLoginAt,
+    bool? profileCompleted,
+    bool? isGoogleUser,
   }) {
     return User(
       uid: uid,
-      displayName: displayName ?? this.displayName,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
       email: email ?? this.email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       photoURL: photoURL ?? this.photoURL,
+      lastPhotoUpdate: lastPhotoUpdate ?? this.lastPhotoUpdate,
       settings: settings ?? this.settings,
       createdAt: createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      profileCompleted: profileCompleted ?? this.profileCompleted,
+      isGoogleUser: isGoogleUser ?? this.isGoogleUser,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_state_service.dart';
+import 'user_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -54,8 +55,15 @@ class AuthService {
         password: password,
       );
 
-      // Update app state
+      // Create user profile
       if (credential.user != null) {
+        final userService = UserService();
+        await userService.createUserProfile(
+          uid: credential.user!.uid,
+          email: email,
+          isGoogleUser: false,
+        );
+
         await AppStateService.instance
             .setUserLoggedIn(true, credential.user!.uid);
       }
@@ -98,8 +106,22 @@ class AuthService {
       // Once signed in, return the UserCredential
       final userCredential = await _auth.signInWithCredential(credential);
 
-      // Update app state
+      // Check if this is a new user and create profile if needed
       if (userCredential.user != null) {
+        final userService = UserService();
+        final existingUser =
+            await userService.getUserProfile(userCredential.user!.uid);
+
+        if (existingUser == null) {
+          // New Google user - create profile
+          await userService.createUserProfile(
+            uid: userCredential.user!.uid,
+            email: userCredential.user!.email ?? '',
+            photoURL: userCredential.user!.photoURL,
+            isGoogleUser: true,
+          );
+        }
+
         await AppStateService.instance
             .setUserLoggedIn(true, userCredential.user!.uid);
       }
