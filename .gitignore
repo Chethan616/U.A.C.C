@@ -43,3 +43,4 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+\n# Secrets and credentials\n*.json\nuacc-*.json\nlib/services/api_config_service.dart\n
