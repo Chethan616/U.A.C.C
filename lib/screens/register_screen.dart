@@ -319,7 +319,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final credential = await _authService.signInWithGoogle();
+      // Force account picker for new registrations
+      final credential =
+          await _authService.signInWithGoogle(forceAccountPicker: true);
 
       if (credential != null && mounted) {
         Navigator.pushReplacementNamed(context, '/home');

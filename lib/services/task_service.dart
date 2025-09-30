@@ -61,7 +61,7 @@ enum TaskPriority {
 
 class TaskService {
   static const MethodChannel _channel = MethodChannel('com.example.uacc/tasks');
-  
+
   // Google Sign-In for Google Tasks integration
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [
@@ -69,7 +69,7 @@ class TaskService {
       'https://www.googleapis.com/auth/calendar',
     ],
   );
-  
+
   /// Get all tasks from local storage and Google Tasks
   static Future<List<Task>> getTasks() async {
     try {
@@ -78,23 +78,28 @@ class TaskService {
       if (googleTasks.isNotEmpty) {
         return googleTasks;
       }
-      
+
       // Fallback to local tasks
       final List<dynamic> tasksData = await _channel.invokeMethod('getTasks');
-      
+
       return tasksData.map((taskData) {
         final Map<String, dynamic> data = Map<String, dynamic>.from(taskData);
-        
+
         return Task(
           id: data['id'] ?? '',
           title: data['title'] ?? '',
           description: data['description'],
-          dueDate: data['dueDate'] != null ? DateTime.fromMillisecondsSinceEpoch(data['dueDate']) : null,
+          dueDate: data['dueDate'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(data['dueDate'])
+              : null,
           completed: data['completed'] ?? false,
           priority: _parsePriority(data['priority']),
           notes: data['notes'],
-          createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] ?? DateTime.now().millisecondsSinceEpoch),
-          updatedAt: data['updatedAt'] != null ? DateTime.fromMillisecondsSinceEpoch(data['updatedAt']) : null,
+          createdAt: DateTime.fromMillisecondsSinceEpoch(
+              data['createdAt'] ?? DateTime.now().millisecondsSinceEpoch),
+          updatedAt: data['updatedAt'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(data['updatedAt'])
+              : null,
         );
       }).toList();
     } catch (e) {
@@ -102,7 +107,7 @@ class TaskService {
       return _getMockTasks();
     }
   }
-  
+
   /// Create a new task
   static Future<Task> createTask({
     required String title,
@@ -120,33 +125,38 @@ class TaskService {
         'notes': notes,
         'createdAt': DateTime.now().millisecondsSinceEpoch,
       };
-      
+
       // Try to create in Google Tasks first
       final googleTask = await _createGoogleTask(title, description, dueDate);
       if (googleTask != null) {
         return googleTask;
       }
-      
+
       // Fallback to local storage
-      final Map<dynamic, dynamic> result = await _channel.invokeMethod('createTask', taskData);
-      
+      final Map<dynamic, dynamic> result =
+          await _channel.invokeMethod('createTask', taskData);
+
       return Task(
         id: result['id'],
         title: result['title'],
         description: result['description'],
-        dueDate: result['dueDate'] != null ? DateTime.fromMillisecondsSinceEpoch(result['dueDate']) : null,
+        dueDate: result['dueDate'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(result['dueDate'])
+            : null,
         completed: result['completed'] ?? false,
         priority: _parsePriority(result['priority']),
         notes: result['notes'],
         createdAt: DateTime.fromMillisecondsSinceEpoch(result['createdAt']),
-        updatedAt: result['updatedAt'] != null ? DateTime.fromMillisecondsSinceEpoch(result['updatedAt']) : null,
+        updatedAt: result['updatedAt'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(result['updatedAt'])
+            : null,
       );
     } catch (e) {
       print('Error creating task: $e');
       throw Exception('Failed to create task');
     }
   }
-  
+
   /// Update an existing task
   static Future<Task> updateTask(Task task) async {
     try {
@@ -160,16 +170,16 @@ class TaskService {
         'notes': task.notes,
         'updatedAt': DateTime.now().millisecondsSinceEpoch,
       };
-      
+
       await _channel.invokeMethod('updateTask', taskData);
-      
+
       return task.copyWith(updatedAt: DateTime.now());
     } catch (e) {
       print('Error updating task: $e');
       throw Exception('Failed to update task');
     }
   }
-  
+
   /// Delete a task
   static Future<void> deleteTask(String taskId) async {
     try {
@@ -179,24 +189,25 @@ class TaskService {
       throw Exception('Failed to delete task');
     }
   }
-  
+
   /// Get task statistics
   static Future<Map<String, int>> getTaskStats() async {
     try {
-      final Map<dynamic, dynamic> stats = await _channel.invokeMethod('getTaskStats');
+      final Map<dynamic, dynamic> stats =
+          await _channel.invokeMethod('getTaskStats');
       return Map<String, int>.from(stats);
     } catch (e) {
       print('Error getting task stats: $e');
       return {
-        'totalTasks': 15,
-        'completedTasks': 8,
-        'pendingTasks': 7,
-        'overdueTasks': 3,
-        'todayTasks': 4,
+        'totalTasks': 12,
+        'completedTasks': 4,
+        'pendingTasks': 8,
+        'overdueTasks': 2,
+        'todayTasks': 3,
       };
     }
   }
-  
+
   /// Sign in to Google for Google Tasks/Calendar integration
   static Future<bool> signInToGoogle() async {
     try {
@@ -207,7 +218,7 @@ class TaskService {
       return false;
     }
   }
-  
+
   /// Sign out from Google
   static Future<void> signOutFromGoogle() async {
     try {
@@ -216,7 +227,7 @@ class TaskService {
       print('Error signing out from Google: $e');
     }
   }
-  
+
   /// Check if signed in to Google
   static Future<bool> isSignedInToGoogle() async {
     try {
@@ -227,37 +238,41 @@ class TaskService {
       return false;
     }
   }
-  
+
   // Private methods for Google Tasks integration
   static Future<List<Task>> _getGoogleTasks() async {
     try {
       final GoogleSignInAccount? account = await _googleSignIn.signInSilently();
       if (account == null) return [];
-      
+
       final headers = await account.authHeaders;
       final client = authenticatedClient(
         Client(),
         AccessCredentials(
-          AccessToken('Bearer', headers['Authorization']!.replaceAll('Bearer ', ''), DateTime.now().add(const Duration(hours: 1))),
+          AccessToken(
+              'Bearer',
+              headers['Authorization']!.replaceAll('Bearer ', ''),
+              DateTime.now().toUtc().add(const Duration(hours: 1))),
           null,
           ['https://www.googleapis.com/auth/tasks'],
         ),
       );
-      
+
       final tasksApi = tasks.TasksApi(client);
       final taskLists = await tasksApi.tasklists.list();
-      
+
       List<Task> allTasks = [];
-      
+
       for (final taskList in taskLists.items ?? []) {
         final taskItems = await tasksApi.tasks.list(taskList.id!);
-        
+
         for (final taskItem in taskItems.items ?? []) {
           allTasks.add(Task(
             id: taskItem.id!,
             title: taskItem.title ?? '',
             description: taskItem.notes,
-            dueDate: taskItem.due != null ? DateTime.parse(taskItem.due!) : null,
+            dueDate:
+                taskItem.due != null ? DateTime.parse(taskItem.due!) : null,
             completed: taskItem.status == 'completed',
             priority: TaskPriority.normal, // Google Tasks doesn't have priority
             notes: taskItem.notes,
@@ -265,7 +280,7 @@ class TaskService {
           ));
         }
       }
-      
+
       client.close();
       return allTasks;
     } catch (e) {
@@ -273,47 +288,53 @@ class TaskService {
       return [];
     }
   }
-  
-  static Future<Task?> _createGoogleTask(String title, String? description, DateTime? dueDate) async {
+
+  static Future<Task?> _createGoogleTask(
+      String title, String? description, DateTime? dueDate) async {
     try {
       final GoogleSignInAccount? account = await _googleSignIn.signInSilently();
       if (account == null) return null;
-      
+
       final headers = await account.authHeaders;
       final client = authenticatedClient(
         Client(),
         AccessCredentials(
-          AccessToken('Bearer', headers['Authorization']!.replaceAll('Bearer ', ''), DateTime.now().add(const Duration(hours: 1))),
+          AccessToken(
+              'Bearer',
+              headers['Authorization']!.replaceAll('Bearer ', ''),
+              DateTime.now().toUtc().add(const Duration(hours: 1))),
           null,
           ['https://www.googleapis.com/auth/tasks'],
         ),
       );
-      
+
       final tasksApi = tasks.TasksApi(client);
       final taskLists = await tasksApi.tasklists.list();
-      
+
       if (taskLists.items != null && taskLists.items!.isNotEmpty) {
         final newTask = tasks.Task()
           ..title = title
           ..notes = description
           ..due = dueDate?.toIso8601String();
-        
-        final createdTask = await tasksApi.tasks.insert(newTask, taskLists.items!.first.id!);
-        
+
+        final createdTask =
+            await tasksApi.tasks.insert(newTask, taskLists.items!.first.id!);
+
         client.close();
-        
+
         return Task(
           id: createdTask.id!,
           title: createdTask.title!,
           description: createdTask.notes,
-          dueDate: createdTask.due != null ? DateTime.parse(createdTask.due!) : null,
+          dueDate:
+              createdTask.due != null ? DateTime.parse(createdTask.due!) : null,
           completed: createdTask.status == 'completed',
           priority: TaskPriority.normal,
           notes: createdTask.notes,
           createdAt: DateTime.now(),
         );
       }
-      
+
       client.close();
       return null;
     } catch (e) {
@@ -321,7 +342,7 @@ class TaskService {
       return null;
     }
   }
-  
+
   static TaskPriority _parsePriority(dynamic priority) {
     switch (priority) {
       case 'low':
@@ -334,7 +355,7 @@ class TaskService {
         return TaskPriority.normal;
     }
   }
-  
+
   // Mock data for fallback
   static List<Task> _getMockTasks() {
     final now = DateTime.now();

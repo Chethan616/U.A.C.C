@@ -5,7 +5,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/automation_models.dart';
-import 'api_config_service.dart';
 
 class NotificationAutomationService {
   static const _storage = FlutterSecureStorage();
@@ -61,7 +60,6 @@ class NotificationAutomationService {
       final packageName = notificationData['packageName'] as String?;
       final title = notificationData['title'] as String?;
       final text = notificationData['text'] as String?;
-      final timestamp = notificationData['timestamp'] as int?;
 
       if (!_isMessagingApp(packageName)) return;
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cairo</string>
+    <string name="accessibility_service_description">MaterialYou Dynamic Island Service - Provides iOS-like dynamic island with Material You theming</string>
+    <string name="tasks_widget_description">Track your focus flow with expressive Material You tasks</string>
+</resources>

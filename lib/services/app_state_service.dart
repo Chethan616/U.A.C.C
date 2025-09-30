@@ -70,5 +70,39 @@ class AppStateService {
     await initialize();
     await _prefs?.remove(_keyUserLoggedIn);
     await _prefs?.remove(_keyLastUserId);
+
+    // Also clear any other user-specific keys that might exist
+    final keys = _prefs?.getKeys() ?? <String>{};
+    for (final key in keys) {
+      if (key.startsWith('user_') ||
+          key.startsWith('profile_') ||
+          key.startsWith('cache_') ||
+          key.contains('_uid_')) {
+        await _prefs?.remove(key);
+      }
+    }
+  }
+
+  // Clear authentication state completely (for account switching)
+  Future<void> clearAuthenticationState() async {
+    await initialize();
+    await _prefs?.remove(_keyUserLoggedIn);
+    await _prefs?.remove(_keyLastUserId);
+
+    // Clear all cached data but keep onboarding status
+    final keys = _prefs?.getKeys() ?? <String>{};
+    for (final key in keys) {
+      if (key != _keyFirstLaunch && key != _keyOnboardingCompleted) {
+        await _prefs?.remove(key);
+      }
+    }
+  }
+
+  // Check if current user matches stored user (for account switching detection)
+  Future<bool> isCurrentUserSameAsStored(String? currentUserId) async {
+    if (currentUserId == null) return false;
+
+    final storedUserId = await getLastUserId();
+    return storedUserId == currentUserId;
   }
 }

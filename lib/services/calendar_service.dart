@@ -1,8 +1,6 @@
 import 'package:flutter/services.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis/calendar/v3.dart' as calendar;
-import 'package:http/http.dart' show Client;
+import 'google_auth_service.dart';
 
 class CalendarEvent {
   final String id;
@@ -75,13 +73,8 @@ class CalendarService {
   static const MethodChannel _channel =
       MethodChannel('com.example.uacc/calendar');
 
-  // Google Sign-In for Google Calendar integration
-  static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/calendar.events',
-    ],
-  );
+  // Use the shared Google Auth Service for consistency
+  static final GoogleAuthService _authService = GoogleAuthService();
 
   /// Get events for a specific date range
   static Future<List<CalendarEvent>> getEvents({
@@ -92,42 +85,68 @@ class CalendarService {
       startDate ??= DateTime.now().subtract(const Duration(days: 7));
       endDate ??= DateTime.now().add(const Duration(days: 30));
 
+      print(
+          "🚀 CalendarService: getEvents called with range $startDate to $endDate");
+
       // Try to get events from Google Calendar first
-      final googleEvents = await _getGoogleCalendarEvents(startDate, endDate);
-      if (googleEvents.isNotEmpty) {
-        return googleEvents;
+      try {
+        print(
+            "🔄 CalendarService: Attempting to fetch from Google Calendar...");
+        final googleEvents = await _getGoogleCalendarEvents(startDate, endDate);
+        if (googleEvents.isNotEmpty) {
+          print(
+              "✅ CalendarService: Returning ${googleEvents.length} Google Calendar events");
+          return googleEvents;
+        } else {
+          print(
+              "⚠️ CalendarService: No Google Calendar events found, trying local calendar...");
+        }
+      } catch (e) {
+        print('❌ CalendarService: Error getting Google Calendar events: $e');
       }
 
       // Fallback to local calendar
-      final List<dynamic> eventsData =
-          await _channel.invokeMethod('getEvents', {
-        'startDate': startDate.millisecondsSinceEpoch,
-        'endDate': endDate.millisecondsSinceEpoch,
-      });
+      try {
+        final List<dynamic> eventsData =
+            await _channel.invokeMethod('getEvents', {
+          'startDate': startDate.millisecondsSinceEpoch,
+          'endDate': endDate.millisecondsSinceEpoch,
+        });
 
-      return eventsData.map((eventData) {
-        final Map<String, dynamic> data = Map<String, dynamic>.from(eventData);
+        final localEvents = eventsData.map((eventData) {
+          final Map<String, dynamic> data =
+              Map<String, dynamic>.from(eventData);
 
-        return CalendarEvent(
-          id: data['id'] ?? '',
-          title: data['title'] ?? '',
-          description: data['description'],
-          startTime: DateTime.fromMillisecondsSinceEpoch(data['startTime']),
-          endTime: DateTime.fromMillisecondsSinceEpoch(data['endTime']),
-          location: data['location'],
-          attendees: data['attendees'] != null
-              ? List<String>.from(data['attendees'])
-              : null,
-          isAllDay: data['isAllDay'] ?? false,
-          priority: _parsePriority(data['priority']),
-          meetingLink: data['meetingLink'],
-          createdAt: DateTime.fromMillisecondsSinceEpoch(
-              data['createdAt'] ?? DateTime.now().millisecondsSinceEpoch),
-          updatedAt: data['updatedAt'] != null
-              ? DateTime.fromMillisecondsSinceEpoch(data['updatedAt'])
-              : null,
-        );
-      }).toList();
+          return CalendarEvent(
+            id: data['id'] ?? '',
+            title: data['title'] ?? '',
+            description: data['description'],
+            startTime: DateTime.fromMillisecondsSinceEpoch(data['startTime']),
+            endTime: DateTime.fromMillisecondsSinceEpoch(data['endTime']),
+            location: data['location'],
+            attendees: data['attendees'] != null
+                ? List<String>.from(data['attendees'])
+                : null,
+            isAllDay: data['isAllDay'] ?? false,
+            priority: _parsePriority(data['priority']),
+            meetingLink: data['meetingLink'],
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+                data['createdAt'] ?? DateTime.now().millisecondsSinceEpoch),
+            updatedAt: data['updatedAt'] != null
+                ? DateTime.fromMillisecondsSinceEpoch(data['updatedAt'])
+                : null,
+          );
+        }).toList();
+
+        if (localEvents.isNotEmpty) {
+          return localEvents;
+        }
+      } catch (e) {
+        print('Error getting local calendar events: $e');
+      }
+
+      // Final fallback to mock events to ensure UI doesn't break
+      return _getMockEvents();
     } catch (e) {
       print('Error getting calendar events: $e');
       return _getMockEvents();
@@ -136,19 +155,27 @@ class CalendarService {
 
   /// Get events for today
   static Future<List<CalendarEvent>> getTodayEvents() async {
+    print("📅 CalendarService: getTodayEvents called");
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    return await getEvents(startDate: startOfDay, endDate: endOfDay);
+    print("📅 CalendarService: Today's range - $startOfDay to $endOfDay");
+    final events = await getEvents(startDate: startOfDay, endDate: endOfDay);
+    print("📅 CalendarService: Found ${events.length} events for today");
+    return events;
   }
 
   /// Get upcoming events (next 7 days)
   static Future<List<CalendarEvent>> getUpcomingEvents() async {
+    print("🔮 CalendarService: getUpcomingEvents called");
     final now = DateTime.now();
     final endDate = now.add(const Duration(days: 7));
 
-    return await getEvents(startDate: now, endDate: endDate);
+    print("🔮 CalendarService: Upcoming range - $now to $endDate");
+    final events = await getEvents(startDate: now, endDate: endDate);
+    print("🔮 CalendarService: Found ${events.length} upcoming events");
+    return events;
   }
 
   /// Create a new event
@@ -277,8 +304,7 @@ class CalendarService {
   /// Sign in to Google for Google Calendar integration
   static Future<bool> signInToGoogle() async {
     try {
-      final GoogleSignInAccount? account = await _googleSignIn.signIn();
-      return account != null;
+      return await _authService.signIn();
     } catch (e) {
       print('Error signing in to Google: $e');
       return false;
@@ -288,7 +314,7 @@ class CalendarService {
   /// Sign out from Google
   static Future<void> signOutFromGoogle() async {
     try {
-      await _googleSignIn.signOut();
+      await _authService.signOut();
     } catch (e) {
       print('Error signing out from Google: $e');
     }
@@ -297,8 +323,7 @@ class CalendarService {
   /// Check if signed in to Google
   static Future<bool> isSignedInToGoogle() async {
     try {
-      final GoogleSignInAccount? account = await _googleSignIn.signInSilently();
-      return account != null;
+      return _authService.isSignedIn;
     } catch (e) {
       print('Error checking Google sign-in: $e');
       return false;
@@ -309,23 +334,42 @@ class CalendarService {
   static Future<List<CalendarEvent>> _getGoogleCalendarEvents(
       DateTime startDate, DateTime endDate) async {
     try {
-      final GoogleSignInAccount? account = await _googleSignIn.signInSilently();
-      if (account == null) return [];
+      print("📅 CalendarService: Starting Google Calendar events fetch");
+      print("📅 CalendarService: Date range - From: $startDate To: $endDate");
 
-      final headers = await account.authHeaders;
-      final client = authenticatedClient(
-        Client(),
-        AccessCredentials(
-          AccessToken(
-              'Bearer',
-              headers['Authorization']!.replaceAll('Bearer ', ''),
-              DateTime.now().add(const Duration(hours: 1))),
-          null,
-          ['https://www.googleapis.com/auth/calendar'],
-        ),
-      );
+      // Initialize auth service if needed
+      _authService.initialize();
 
+      // Ensure user is authenticated
+      if (!_authService.isSignedIn) {
+        print(
+            '📅 CalendarService: User not signed in, attempting to sign in for Calendar access...');
+        final success = await _authService.signIn();
+        if (!success) {
+          print(
+              '❌ CalendarService: Failed to sign in to Google for Calendar access');
+          return [];
+        }
+      } else {
+        print(
+            "✅ CalendarService: User already signed in - ${_authService.userEmail}");
+      }
+
+      print("🔑 CalendarService: Requesting authenticated client...");
+      final client = await _authService.getAuthenticatedClient();
+      if (client == null) {
+        print(
+            '❌ CalendarService: Failed to get authenticated client for Calendar access');
+        return [];
+      }
+
+      print("🌐 CalendarService: Creating Google Calendar API client...");
       final calendarApi = calendar.CalendarApi(client);
+
+      print("📡 CalendarService: Making API call to fetch events...");
+      print(
+          "📡 CalendarService: Parameters - Calendar: primary, TimeMin: ${startDate.toUtc()}, TimeMax: ${endDate.toUtc()}");
+
       final events = await calendarApi.events.list(
         'primary',
         timeMin: startDate.toUtc(),
@@ -335,28 +379,40 @@ class CalendarService {
         maxResults: 100,
       );
 
+      print(
+          "📊 CalendarService: API call successful! Received ${events.items?.length ?? 0} events");
+
       List<CalendarEvent> calendarEvents = [];
 
+      print(
+          "🔄 CalendarService: Processing ${events.items?.length ?? 0} events...");
       for (final event in events.items ?? []) {
+        print(
+            "📝 CalendarService: Processing event - ${event.summary ?? 'Untitled'}");
         DateTime? startTime;
         DateTime? endTime;
         bool isAllDay = false;
 
         if (event.start?.dateTime != null) {
           startTime = event.start!.dateTime!;
+          print("⏰ CalendarService: Event start time (DateTime): $startTime");
         } else if (event.start?.date != null) {
           startTime = event.start!.date!;
           isAllDay = true;
+          print("📅 CalendarService: Event start date (All-day): $startTime");
         }
 
         if (event.end?.dateTime != null) {
           endTime = event.end!.dateTime!;
+          print("⏰ CalendarService: Event end time (DateTime): $endTime");
         } else if (event.end?.date != null) {
           endTime = event.end!.date!;
           isAllDay = true;
+          print("📅 CalendarService: Event end date (All-day): $endTime");
         }
 
         if (startTime != null && endTime != null) {
+          print("✅ CalendarService: Adding event to list - ${event.summary}");
           calendarEvents.add(CalendarEvent(
             id: event.id!,
             title: event.summary ?? 'Untitled Event',
@@ -365,7 +421,9 @@ class CalendarService {
             endTime: endTime,
             location: event.location,
             attendees: event.attendees
-                ?.map((attendee) => attendee.email ?? '')
+                ?.map<String>(
+                    (calendar.EventAttendee attendee) => attendee.email ?? '')
+                .where((String email) => email.isNotEmpty)
                 .toList(),
             isAllDay: isAllDay,
             priority:
@@ -374,13 +432,30 @@ class CalendarService {
             createdAt: event.created ?? DateTime.now(),
             updatedAt: event.updated,
           ));
+        } else {
+          print(
+              "⚠️ CalendarService: Skipping event ${event.summary} - missing start/end times");
         }
       }
 
       client.close();
+      print(
+          "🎉 CalendarService: Successfully processed ${calendarEvents.length} calendar events");
       return calendarEvents;
     } catch (e) {
-      print('Error getting Google Calendar events: $e');
+      print('❌ CalendarService: Error getting Google Calendar events - $e');
+
+      // Check for specific error types
+      if (e.toString().contains('403')) {
+        print(
+            '🔒 CalendarService: Permission denied - Calendar API may not be enabled or insufficient scopes');
+      } else if (e.toString().contains('401')) {
+        print(
+            '🔐 CalendarService: Authentication error - Access token may be invalid');
+      } else if (e.toString().contains('quotaExceeded')) {
+        print('📊 CalendarService: API quota exceeded');
+      }
+
       return [];
     }
   }
@@ -396,21 +471,17 @@ class CalendarService {
     String? meetingLink,
   ) async {
     try {
-      final GoogleSignInAccount? account = await _googleSignIn.signInSilently();
-      if (account == null) return null;
+      // Ensure user is authenticated
+      if (!_authService.isSignedIn) {
+        print('User not signed in for Calendar event creation');
+        return null;
+      }
 
-      final headers = await account.authHeaders;
-      final client = authenticatedClient(
-        Client(),
-        AccessCredentials(
-          AccessToken(
-              'Bearer',
-              headers['Authorization']!.replaceAll('Bearer ', ''),
-              DateTime.now().add(const Duration(hours: 1))),
-          null,
-          ['https://www.googleapis.com/auth/calendar'],
-        ),
-      );
+      final client = await _authService.getAuthenticatedClient();
+      if (client == null) {
+        print('Failed to get authenticated client for Calendar event creation');
+        return null;
+      }
 
       final calendarApi = calendar.CalendarApi(client);
 
@@ -429,7 +500,8 @@ class CalendarService {
 
       if (attendees != null && attendees.isNotEmpty) {
         event.attendees = attendees
-            .map((email) => calendar.EventAttendee()..email = email)
+            .map<calendar.EventAttendee>(
+                (email) => calendar.EventAttendee()..email = email)
             .toList();
       }
 
@@ -449,7 +521,8 @@ class CalendarService {
         endTime: createdEvent.end!.dateTime ?? createdEvent.end!.date!,
         location: createdEvent.location,
         attendees: createdEvent.attendees
-            ?.map((attendee) => attendee.email ?? '')
+            ?.map<String>(
+                (calendar.EventAttendee attendee) => attendee.email ?? '')
             .toList(),
         isAllDay: isAllDay,
         priority: EventPriority.normal,

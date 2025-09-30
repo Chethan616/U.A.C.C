@@ -66,7 +66,7 @@ This guide will help you set up Google Workspace integration for UACC's automati
 
 Open the UACC app and go to Settings > API & Permissions Setup:
 
-1. **Gemini API Key**: Already configured with your key: `AIzaSyAWH1WyfGJE-JdtZRbS2leFRK2yX4TWJu0`
+1. **Gemini API Key**: Already configured with key: `AIzaSyAWH1WyfGJE-JdtZRbS2leFRK2yX4TWJu0`
 
 2. **Google OAuth Client ID**: Enter the Client ID from Step 4
 

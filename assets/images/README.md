@@ -1,2 +1,2 @@
 # Images directory
-This directory contains image assets for the UACC app.
+This directory contains image assets for the Cairo app.

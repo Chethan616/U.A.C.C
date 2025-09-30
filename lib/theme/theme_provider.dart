@@ -38,17 +38,17 @@ extension AppThemeModeExtension on AppThemeMode {
       case AppThemeMode.original:
         return const Color(0xFFE8C189); // slightly brighter warm
       case AppThemeMode.violet:
-        return const Color(0xFF7F54D6); // brighter violet
+        return const Color(0xFFABA3FF); // updated violet
       case AppThemeMode.green:
-        return const Color(0xFF3F8C2A); // more vivid green
+        return const Color(0xFFAFFF99); // updated green
       case AppThemeMode.blue:
-        return const Color(0xFF1E88E5); // brighter blue
+        return const Color(0xFFABBFFF); // updated blue
       case AppThemeMode.orange:
-        return const Color(0xFFFFA726); // lighter/brighter orange
+        return const Color(0xFFFF7A04); // updated orange
       case AppThemeMode.red:
-        return const Color(0xFFEF5350); // brighter red
+        return const Color(0xFFFF725E); // updated red
       case AppThemeMode.system:
-        return const Color(0xFF7F54D6);
+        return const Color(0xFFABA3FF);
     }
   }
 
@@ -73,7 +73,7 @@ extension AppThemeModeExtension on AppThemeMode {
 }
 
 class ThemeNotifier extends StateNotifier<AppThemeMode> {
-  ThemeNotifier() : super(AppThemeMode.original) {
+  ThemeNotifier() : super(AppThemeMode.violet) {
     _loadTheme();
   }
 
@@ -81,7 +81,8 @@ class ThemeNotifier extends StateNotifier<AppThemeMode> {
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    final themeIndex = prefs.getInt(_themeKey) ?? 0;
+    final themeIndex =
+        prefs.getInt(_themeKey) ?? 1; // Default to violet (index 1)
     state = AppThemeMode.values[themeIndex];
   }
 
@@ -110,8 +111,8 @@ class AppThemes {
 
   // Material 3 Violet Theme - Pure white/black system-aware
   static ThemeData violetTheme(Brightness systemBrightness) => _buildTheme(
-        primaryColor: const Color(0xFF7F54D6),
-        secondaryColor: const Color(0xFFF1E8FF),
+        primaryColor: const Color(0xFFABA3FF),
+        secondaryColor: const Color(0xFFF0EDFF),
         surfaceColor: systemBrightness == Brightness.light
             ? const Color(0xFFFBF8FF)
             : const Color(0xFF121212), // Material 3 dark surface
@@ -126,8 +127,8 @@ class AppThemes {
 
   // Material 3 Green Theme - Pure white/black system-aware
   static ThemeData greenTheme(Brightness systemBrightness) => _buildTheme(
-        primaryColor: const Color(0xFF3F8C2A),
-        secondaryColor: const Color(0xFFEAF6E7),
+        primaryColor: const Color(0xFFAFFF99),
+        secondaryColor: const Color(0xFFF0FFE3),
         surfaceColor: systemBrightness == Brightness.light
             ? const Color(0xFFF7FFF6)
             : const Color(0xFF121212),
@@ -142,8 +143,8 @@ class AppThemes {
 
   // Material 3 Blue Theme - Pure white/black system-aware
   static ThemeData blueTheme(Brightness systemBrightness) => _buildTheme(
-        primaryColor: const Color(0xFF1E88E5),
-        secondaryColor: const Color(0xFFEAF6FF),
+        primaryColor: const Color(0xFFABBFFF),
+        secondaryColor: const Color(0xFFEAF3FF),
         surfaceColor: systemBrightness == Brightness.light
             ? const Color(0xFFF6FBFF)
             : const Color(0xFF121212),
@@ -158,8 +159,8 @@ class AppThemes {
 
   // Material 3 Orange Theme - Pure white/black system-aware
   static ThemeData orangeTheme(Brightness systemBrightness) => _buildTheme(
-        primaryColor: const Color(0xFFFFA726),
-        secondaryColor: const Color(0xFFFFF0D9),
+        primaryColor: const Color(0xFFFF7A04),
+        secondaryColor: const Color(0xFFFFE6CC),
         surfaceColor: systemBrightness == Brightness.light
             ? const Color(0xFFFFFBF6)
             : const Color(0xFF121212),
@@ -174,8 +175,8 @@ class AppThemes {
 
   // Material 3 Red Theme - Pure white/black system-aware
   static ThemeData redTheme(Brightness systemBrightness) => _buildTheme(
-        primaryColor: const Color(0xFFEF5350),
-        secondaryColor: const Color(0xFFFFE5E6),
+        primaryColor: const Color(0xFFFF725E),
+        secondaryColor: const Color(0xFFFFE4DF),
         surfaceColor: systemBrightness == Brightness.light
             ? const Color(0xFFFFFBFB)
             : const Color(0xFF121212),

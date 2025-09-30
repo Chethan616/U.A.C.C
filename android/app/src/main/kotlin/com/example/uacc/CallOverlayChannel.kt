@@ -8,6 +8,8 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.Log
+import com.example.uacc.dynamicisland.service.IslandOverlayService
+import com.example.uacc.dynamicisland.model.SpeakerType
 
 object CallOverlayChannel {
     
@@ -50,21 +52,23 @@ object CallOverlayChannel {
         when (call.method) {
             "startOverlayService" -> {
                 try {
-                    CallOverlayService.startService(context)
+                    // Dynamic Island uses AccessibilityService - user needs to enable it manually
+                    Log.d(TAG, "Dynamic Island service start requested")
                     result.success(true)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to start overlay service", e)
-                    result.error("SERVICE_ERROR", "Failed to start overlay service", e.message)
+                    Log.e(TAG, "Failed to handle Dynamic Island service start", e)
+                    result.error("SERVICE_ERROR", "Failed to handle Dynamic Island service start", e.message)
                 }
             }
             
             "stopOverlayService" -> {
                 try {
-                    CallOverlayService.stopService(context)
+                    // Dynamic Island AccessibilityService management
+                    Log.d(TAG, "Dynamic Island service stop requested")
                     result.success(true)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to stop overlay service", e)
-                    result.error("SERVICE_ERROR", "Failed to stop overlay service", e.message)
+                    Log.e(TAG, "Failed to handle Dynamic Island service stop", e)
+                    result.error("SERVICE_ERROR", "Failed to handle Dynamic Island service stop", e.message)
                 }
             }
             
@@ -103,8 +107,55 @@ object CallOverlayChannel {
             }
             
             "clearTranscript" -> {
-                sendEvent("transcriptUpdate", mapOf("transcript" to ""))
-                result.success(true)
+                try {
+                    IslandOverlayService.instance?.clearTranscript()
+                    sendEvent("transcriptUpdate", mapOf("transcript" to ""))
+                    result.success(true)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to clear transcript", e)
+                    result.error("TRANSCRIPT_ERROR", "Failed to clear transcript", e.message)
+                }
+            }
+            
+            "startCallTranscript" -> {
+                try {
+                    IslandOverlayService.instance?.startCallTranscript()
+                    result.success(true)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to start call transcript", e)
+                    result.error("TRANSCRIPT_ERROR", "Failed to start call transcript", e.message)
+                }
+            }
+            
+            "stopCallTranscript" -> {
+                try {
+                    IslandOverlayService.instance?.stopCallTranscript()
+                    result.success(true)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to stop call transcript", e)
+                    result.error("TRANSCRIPT_ERROR", "Failed to stop call transcript", e.message)
+                }
+            }
+            
+            "addTranscriptMessage" -> {
+                try {
+                    val text = call.argument<String>("text") ?: ""
+                    val speakerTypeStr = call.argument<String>("speakerType") ?: "OUTGOING"
+                    val isPartial = call.argument<Boolean>("isPartial") ?: false
+                    
+                    val speakerType = when (speakerTypeStr.uppercase()) {
+                        "INCOMING" -> SpeakerType.INCOMING
+                        "OUTGOING" -> SpeakerType.OUTGOING 
+                        "SYSTEM" -> SpeakerType.SYSTEM
+                        else -> SpeakerType.OUTGOING
+                    }
+                    
+                    IslandOverlayService.instance?.addTranscriptMessage(text, speakerType, isPartial)
+                    result.success(true)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to add transcript message", e)
+                    result.error("TRANSCRIPT_ERROR", "Failed to add transcript message", e.message)
+                }
             }
             
             "getServiceStatus" -> {

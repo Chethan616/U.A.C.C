@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="cookie_widget_spacing_small">12dp</dimen>
+    <dimen name="cookie_widget_spacing_medium">16dp</dimen>
+    <dimen name="cookie_widget_spacing_large">24dp</dimen>
+</resources>

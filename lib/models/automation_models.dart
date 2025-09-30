@@ -153,6 +153,119 @@ class NotificationAnalysis {
     );
   }
 
+  factory NotificationAnalysis.fallback(
+      String appName, String title, String body) {
+    // Smart local analysis based on app name and content
+    final lowercaseApp = appName.toLowerCase();
+    final lowercaseTitle = title.toLowerCase();
+    final lowercaseBody = body.toLowerCase();
+
+    // Determine category based on app name
+    String category = 'General';
+    if (lowercaseApp.contains('whatsapp') ||
+        lowercaseApp.contains('telegram') ||
+        lowercaseApp.contains('message') ||
+        lowercaseApp.contains('chat')) {
+      category = 'Social';
+    } else if (lowercaseApp.contains('bank') ||
+        lowercaseApp.contains('pay') ||
+        lowercaseApp.contains('wallet') ||
+        lowercaseTitle.contains('payment')) {
+      category = 'Financial';
+    } else if (lowercaseApp.contains('calendar') ||
+        lowercaseApp.contains('reminder') ||
+        lowercaseApp.contains('task') ||
+        lowercaseApp.contains('todo')) {
+      category = 'Productivity';
+    } else if (lowercaseApp.contains('youtube') ||
+        lowercaseApp.contains('spotify') ||
+        lowercaseApp.contains('netflix') ||
+        lowercaseApp.contains('game')) {
+      category = 'Entertainment';
+    }
+
+    // Determine urgency and importance
+    final urgentKeywords = [
+      'urgent',
+      'emergency',
+      'alert',
+      'warning',
+      'critical',
+      'now',
+      'immediately'
+    ];
+    final isUrgent = urgentKeywords.any((keyword) =>
+        lowercaseTitle.contains(keyword) || lowercaseBody.contains(keyword));
+
+    final importantKeywords = [
+      'payment',
+      'deadline',
+      'meeting',
+      'appointment',
+      'delivery'
+    ];
+    final isImportant = isUrgent ||
+        importantKeywords.any((keyword) =>
+            lowercaseTitle.contains(keyword) ||
+            lowercaseBody.contains(keyword));
+
+    // Determine sentiment
+    final positiveKeywords = [
+      'congratulations',
+      'success',
+      'completed',
+      'approved',
+      'welcome'
+    ];
+    final negativeKeywords = [
+      'failed',
+      'error',
+      'declined',
+      'cancelled',
+      'problem'
+    ];
+    String sentiment = 'neutral';
+    if (positiveKeywords.any((keyword) =>
+        lowercaseTitle.contains(keyword) || lowercaseBody.contains(keyword))) {
+      sentiment = 'positive';
+    } else if (negativeKeywords.any((keyword) =>
+        lowercaseTitle.contains(keyword) || lowercaseBody.contains(keyword))) {
+      sentiment = 'negative';
+    }
+
+    // Generate summary
+    String summary = 'Notification from $appName: $title';
+    if (body.isNotEmpty && body != title) {
+      summary += '. $body';
+    }
+
+    // Determine suggested action
+    String suggestedAction = 'View notification';
+    if (category == 'Social') {
+      suggestedAction = 'Reply to message';
+    } else if (category == 'Financial') {
+      suggestedAction = 'Review transaction';
+    } else if (category == 'Productivity') {
+      suggestedAction = 'Check details';
+    }
+
+    return NotificationAnalysis(
+      isImportant: isImportant,
+      urgencyLevel: isUrgent ? 'High' : (isImportant ? 'Medium' : 'Low'),
+      shouldReply: category == 'Social' && !lowercaseBody.contains('group'),
+      actionRequired: isImportant || isUrgent,
+      category: category,
+      sentiment: sentiment,
+      keyTopics: [
+        appName,
+        ...title.split(' ').where((word) => word.length > 3).take(3)
+      ],
+      suggestedAction: suggestedAction,
+      summary: summary,
+      replyTone: sentiment == 'positive' ? 'Friendly' : 'Professional',
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'isImportant': isImportant,

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/enums.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/priority_badge.dart';
+import '../services/ai_analysis_service.dart'
+    show AIAnalysisService, CallAnalysis, TranscriptMessage;
 
 class CallDetailScreen extends StatefulWidget {
   final CallData callData;
@@ -11,6 +13,18 @@ class CallDetailScreen extends StatefulWidget {
     Key? key,
     required this.callData,
   }) : super(key: key);
+
+  /// Quickly spin up the screen with richly detailed mock data.
+  ///
+  /// This is handy for storybook previews, design reviews, or
+  /// simply showcasing the end-to-end experience without wiring
+  /// live call information.
+  factory CallDetailScreen.sample({Key? key}) {
+    return CallDetailScreen(
+      key: key,
+      callData: CallDetailSampleData.enterpriseDiscovery,
+    );
+  }
 
   @override
   State<CallDetailScreen> createState() => _CallDetailScreenState();
@@ -22,10 +36,102 @@ class _CallDetailScreenState extends State<CallDetailScreen>
   final TextEditingController _taskController = TextEditingController();
   bool _isExpanded = false;
 
+  final AIAnalysisService _aiService = AIAnalysisService();
+  bool _isAnalyzing = false;
+  bool _isRegenerating = false;
+  CallAnalysis? _aiAnalysis;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _performCallAnalysis();
+  }
+
+  /// Perform AI analysis of the call
+  Future<void> _performCallAnalysis() async {
+    if (_isAnalyzing || widget.callData.transcript.isEmpty) return;
+
+    setState(() {
+      _isAnalyzing = true;
+    });
+
+    try {
+      final analysis = await _aiService.analyzeCall(
+        contactName: widget.callData.contactName,
+        transcript: widget.callData.transcript,
+        duration: widget.callData.duration,
+        isIncoming: widget.callData.isIncoming,
+      );
+
+      setState(() {
+        _aiAnalysis = analysis;
+        _isAnalyzing = false;
+      });
+    } catch (e) {
+      print('Error performing call analysis: $e');
+      setState(() {
+        _isAnalyzing = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('AI analysis failed: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Regenerate AI summary
+  Future<void> _regenerateCallSummary() async {
+    if (_isRegenerating || widget.callData.transcript.isEmpty) return;
+
+    setState(() {
+      _isRegenerating = true;
+    });
+
+    try {
+      final transcriptText = widget.callData.transcript
+          .map((msg) => '${msg.speaker}: ${msg.text}')
+          .join('\n');
+
+      final newSummary = await _aiService.regenerateSummary(
+        content: transcriptText,
+        focusArea: 'call summary with key decisions and action items',
+      );
+
+      if (_aiAnalysis != null) {
+        setState(() {
+          _aiAnalysis = CallAnalysis(
+            summary: newSummary,
+            keyPoints: _aiAnalysis!.keyPoints,
+            sentiment: _aiAnalysis!.sentiment,
+            urgency: _aiAnalysis!.urgency,
+            category: _aiAnalysis!.category,
+            priority: _aiAnalysis!.priority,
+            actionItems: _aiAnalysis!.actionItems,
+          );
+          _isRegenerating = false;
+        });
+      }
+    } catch (e) {
+      print('Error regenerating summary: $e');
+      setState(() {
+        _isRegenerating = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to regenerate summary: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -228,81 +334,142 @@ class _CallDetailScreenState extends State<CallDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // AI Analysis Loading State
+          if (_isAnalyzing)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'AI analyzing call...',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // AI Summary Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.auto_awesome,
-                        color: Theme.of(context).colorScheme.secondary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'AI Summary',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: () =>
-                            setState(() => _isExpanded = !_isExpanded),
-                        icon: Icon(
-                          _isExpanded ? Icons.expand_less : Icons.expand_more,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.callData.summary,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    maxLines: _isExpanded ? null : 3,
-                    overflow: _isExpanded ? null : TextOverflow.ellipsis,
-                  ),
-                  if (_isExpanded) ...[
-                    const SizedBox(height: 16),
+          if (!_isAnalyzing)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
-                        ElevatedButton.icon(
-                          onPressed: _regenerateSummary,
-                          icon: const Icon(Icons.refresh, size: 16),
-                          label: const Text('Regenerate'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                          ),
+                        Icon(
+                          Icons.auto_awesome,
+                          color: _aiAnalysis != null
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.grey,
+                          size: 20,
                         ),
                         const SizedBox(width: 8),
-                        OutlinedButton.icon(
-                          onPressed: _editSummary,
-                          icon: const Icon(Icons.edit, size: 16),
-                          label: const Text('Edit'),
-                          style: OutlinedButton.styleFrom(
+                        Text(
+                          'AI Summary',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                        if (_aiAnalysis != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'AI',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer,
+                                    fontSize: 10,
+                                  ),
+                            ),
+                          ),
+                        ],
+                        const Spacer(),
+                        if (_aiAnalysis != null &&
+                            widget.callData.transcript.isNotEmpty)
+                          IconButton(
+                            onPressed:
+                                _isRegenerating ? null : _regenerateCallSummary,
+                            icon: _isRegenerating
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.refresh, size: 18),
+                            tooltip: 'Regenerate AI summary',
+                          ),
+                        IconButton(
+                          onPressed: () =>
+                              setState(() => _isExpanded = !_isExpanded),
+                          icon: Icon(
+                            _isExpanded ? Icons.expand_less : Icons.expand_more,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _aiAnalysis?.summary ?? widget.callData.summary,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      maxLines: _isExpanded ? null : 3,
+                      overflow: _isExpanded ? null : TextOverflow.ellipsis,
+                    ),
+                    if (_isExpanded) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () => _shareCall(),
+                            icon: const Icon(Icons.share, size: 18),
+                            label: const Text('Share'),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed: () => _editSummary(),
+                            icon: const Icon(Icons.edit, size: 18),
+                            label: const Text('Edit'),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
 
           const SizedBox(height: 16),
 
-          // Key Points
-          if (widget.callData.keyPoints.isNotEmpty) ...[
+          // Key Points - Use AI analysis if available
+          if (_isExpanded &&
+              !_isAnalyzing &&
+              (_aiAnalysis?.keyPoints.isNotEmpty == true ||
+                  widget.callData.keyPoints.isNotEmpty)) ...[
             Text(
               'Key Points',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -315,7 +482,9 @@ class _CallDetailScreenState extends State<CallDetailScreen>
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: widget.callData.keyPoints.map((point) {
+                  children:
+                      (_aiAnalysis?.keyPoints ?? widget.callData.keyPoints)
+                          .map((point) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
@@ -347,31 +516,58 @@ class _CallDetailScreenState extends State<CallDetailScreen>
             const SizedBox(height: 16),
           ],
 
-          // Sentiment Analysis
-          Text(
-            'Call Analysis',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+          // Call Analysis - Use AI analysis if available
+          if (!_isAnalyzing) ...[
+            Text(
+              'Call Analysis',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildAnalysisItem(
+                      'Sentiment',
+                      _aiAnalysis?.sentiment ?? widget.callData.sentiment,
+                      _getSentimentColor(
+                          _aiAnalysis?.sentiment ?? widget.callData.sentiment),
+                    ),
+                    const Divider(),
+                    _buildAnalysisItem(
+                      'Urgency',
+                      _aiAnalysis?.urgency ?? widget.callData.urgency,
+                      _getUrgencyColor(
+                          _aiAnalysis?.urgency ?? widget.callData.urgency),
+                    ),
+                    const Divider(),
+                    _buildAnalysisItem(
+                      'Category',
+                      _aiAnalysis?.category ?? widget.callData.category,
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                    const Divider(),
+                    _buildAnalysisItem(
+                      'Priority',
+                      _getDisplayPriority(),
+                      _getDisplayPriorityColor(),
+                    ),
+                  ],
                 ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildAnalysisItem('Sentiment', widget.callData.sentiment,
-                      _getSentimentColor(widget.callData.sentiment)),
-                  const Divider(),
-                  _buildAnalysisItem('Urgency', widget.callData.urgency,
-                      _getUrgencyColor(widget.callData.urgency)),
-                  const Divider(),
-                  _buildAnalysisItem('Category', widget.callData.category,
-                      Theme.of(context).colorScheme.primary),
-                ],
               ),
             ),
-          ),
+
+            // AI Action Items
+            if (_isExpanded &&
+                (_aiAnalysis?.actionItems.isNotEmpty == true ||
+                    widget.callData.actionItems.isNotEmpty)) ...[
+              const SizedBox(height: 16),
+              _buildActionItemsCard(),
+            ],
+          ],
         ],
       ),
     );
@@ -687,8 +883,240 @@ class _CallDetailScreenState extends State<CallDetailScreen>
     );
   }
 
-  void _regenerateSummary() {
-    // Implementation for regenerating summary
+  /// Helper methods for priority handling
+  String _getPriorityText(PriorityLevel priority) {
+    return priority.label;
+  }
+
+  Color _getPriorityColor(PriorityLevel priority) {
+    switch (priority) {
+      case PriorityLevel.low:
+        return Colors.green;
+      case PriorityLevel.medium:
+        return Colors.orange;
+      case PriorityLevel.high:
+        return Colors.red;
+      case PriorityLevel.urgent:
+        return Colors.red.shade800;
+    }
+  }
+
+  /// Get display priority text from AI analysis or fallback data
+  String _getDisplayPriority() {
+    if (_aiAnalysis?.priority != null) {
+      // AI analysis returns string, convert to display format
+      final priority = _aiAnalysis!.priority.toString().toLowerCase();
+      switch (priority) {
+        case 'low':
+          return 'Low';
+        case 'medium':
+          return 'Medium';
+        case 'high':
+          return 'High';
+        case 'urgent':
+          return 'Urgent';
+        default:
+          return priority.toUpperCase();
+      }
+    }
+    return _getPriorityText(widget.callData.priority);
+  }
+
+  /// Get display priority color from AI analysis or fallback data
+  Color _getDisplayPriorityColor() {
+    if (_aiAnalysis?.priority != null) {
+      final priority = _aiAnalysis!.priority.toString().toLowerCase();
+      switch (priority) {
+        case 'low':
+          return Colors.green;
+        case 'medium':
+          return Colors.orange;
+        case 'high':
+          return Colors.red;
+        case 'urgent':
+          return Colors.red.shade800;
+        default:
+          return Theme.of(context).colorScheme.primary;
+      }
+    }
+    return _getPriorityColor(widget.callData.priority);
+  }
+
+  /// Get action priority color for AI action items
+  Color _getActionPriorityColor(String? priority) {
+    final priorityStr = priority?.toLowerCase() ?? 'medium';
+    switch (priorityStr) {
+      case 'low':
+        return Colors.green;
+      case 'medium':
+        return Colors.orange;
+      case 'high':
+        return Colors.red;
+      case 'urgent':
+        return Colors.red.shade800;
+      default:
+        return Theme.of(context).colorScheme.primary;
+    }
+  }
+
+  /// Build action items card with AI analysis data
+  Widget _buildActionItemsCard() {
+    final hasAIActions = _aiAnalysis?.actionItems.isNotEmpty == true;
+    final hasLocalActions = widget.callData.actionItems.isNotEmpty;
+
+    if (!hasAIActions && !hasLocalActions) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Action Items',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            if (_aiAnalysis != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'AI Generated',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        fontSize: 10,
+                      ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Render AI action items if available
+                if (hasAIActions)
+                  ...(_aiAnalysis!.actionItems.map((action) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  action.title,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  action.description,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                if (action.priority.toLowerCase() != 'low') ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Priority: ${action.priority}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: _getActionPriorityColor(
+                                              action.priority),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList()),
+
+                // Render local action items if no AI actions or as fallback
+                if (!hasAIActions && hasLocalActions)
+                  ...(widget.callData.actionItems.map((action) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            action.isCompleted
+                                ? Icons.check_circle
+                                : Icons.check_circle_outline,
+                            size: 20,
+                            color: action.isCompleted
+                                ? Colors.green
+                                : Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  action.title,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        decoration: action.isCompleted
+                                            ? TextDecoration.lineThrough
+                                            : null,
+                                      ),
+                                ),
+                                if (action.dueDate.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Due: ${action.dueDate}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList()),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _editSummary() {
@@ -769,20 +1197,6 @@ class CallData {
   });
 }
 
-class TranscriptMessage {
-  final String speaker;
-  final String text;
-  final String timestamp;
-  final bool isUser;
-
-  TranscriptMessage({
-    required this.speaker,
-    required this.text,
-    required this.timestamp,
-    required this.isUser,
-  });
-}
-
 class ActionItem {
   final String id;
   final String title;
@@ -795,4 +1209,113 @@ class ActionItem {
     required this.dueDate,
     required this.isCompleted,
   });
+}
+
+/// Centralized sample call data used for demos, QA, and design reviews.
+///
+/// The data purposefully mirrors a realistic post-sales discovery call with
+/// a mix of positive sentiment, medium urgency, and actionable next steps.
+class CallDetailSampleData {
+  CallDetailSampleData._();
+
+  /// A rich demonstration call that exercises the entire screen surface.
+  static final CallData enterpriseDiscovery = CallData(
+    contactName: 'Aisha Rahman',
+    phoneNumber: '+1 (415) 555-0138',
+    timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 2)),
+    duration: const Duration(minutes: 26, seconds: 48),
+    isIncoming: true,
+    hasRecording: true,
+    summary:
+        'Aisha confirmed the rollout timeline, aligned on success metrics, and'
+        ' committed to looping in procurement by mid-week. The conversation'
+        ' ended with a clear plan for pilot activation and two follow-up tasks.',
+    keyPoints: const [
+      'Pilot launch confirmed for next Tuesday with a two-week success window',
+      'Sentiment remained confident; customer is eager but needs procurement buy-in',
+      'Next touchpoint scheduled for Wednesday at 2:30 PM PT',
+    ],
+    sentiment: 'Positive',
+    urgency: 'Medium',
+    category: 'Customer Success',
+    priority: PriorityLevel.high,
+    transcript: [
+      TranscriptMessage(
+        speaker: 'You',
+        text:
+            'Aisha, thanks for making the time. I wanted to confirm the rollout plan for the analytics dashboard.',
+        timestamp: '0:00',
+        isUser: true,
+      ),
+      TranscriptMessage(
+        speaker: 'Aisha Rahman',
+        text:
+            'Absolutely. We are targeting next Tuesday for the pilot start and expect to have the success metrics finalized by Friday.',
+        timestamp: '0:18',
+        isUser: false,
+      ),
+      TranscriptMessage(
+        speaker: 'You',
+        text:
+            'Great. I will prepare the onboarding checklist and share the enablement deck today.',
+        timestamp: '1:02',
+        isUser: true,
+      ),
+      TranscriptMessage(
+        speaker: 'Aisha Rahman',
+        text:
+            'Perfect. Could you also send over the SOC 2 compliance summary? Procurement asked for it.',
+        timestamp: '2:11',
+        isUser: false,
+      ),
+      TranscriptMessage(
+        speaker: 'You',
+        text:
+            'I have it ready. I will attach it to the follow-up email and loop in your procurement partner.',
+        timestamp: '2:32',
+        isUser: true,
+      ),
+      TranscriptMessage(
+        speaker: 'Aisha Rahman',
+        text:
+            'Sounds good. Let us sync again Wednesday at 2:30 so I can share feedback from the ops team.',
+        timestamp: '3:02',
+        isUser: false,
+      ),
+      TranscriptMessage(
+        speaker: 'You',
+        text:
+            'Booked. You will get the calendar invite in a couple of minutes. Anything else on your list?',
+        timestamp: '3:19',
+        isUser: true,
+      ),
+      TranscriptMessage(
+        speaker: 'Aisha Rahman',
+        text:
+            'That covers it for now. Really appreciate the quick turnaround on the training assets.',
+        timestamp: '3:38',
+        isUser: false,
+      ),
+    ],
+    actionItems: [
+      ActionItem(
+        id: 'task-001',
+        title: 'Email onboarding deck and SOC 2 summary to Aisha',
+        dueDate: 'Today, 5:00 PM',
+        isCompleted: false,
+      ),
+      ActionItem(
+        id: 'task-002',
+        title: 'Send procurement contact introduction',
+        dueDate: 'Tomorrow, 11:00 AM',
+        isCompleted: false,
+      ),
+      ActionItem(
+        id: 'task-003',
+        title: 'Prepare agenda for Wednesday sync',
+        dueDate: 'Wednesday, 1:30 PM',
+        isCompleted: true,
+      ),
+    ],
+  );
 }

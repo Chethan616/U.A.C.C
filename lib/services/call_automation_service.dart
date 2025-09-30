@@ -1,7 +1,6 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,7 +8,6 @@ import '../models/automation_models.dart';
 import 'api_config_service.dart';
 
 class CallAutomationService {
-  static const _storage = FlutterSecureStorage();
   static const _geminiApiUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 

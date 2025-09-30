@@ -7,7 +7,7 @@ import '../services/user_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/custom_button.dart';
-import '../utils/image_utils.dart';
+import 'modern_onboarding_screen.dart';
 
 class ProfileCompletionScreen extends ConsumerStatefulWidget {
   final bool isFromGoogleSignUp;
@@ -355,7 +355,13 @@ class _ProfileCompletionScreenState
       );
 
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        // Navigate to onboarding for new users after profile completion
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) =>
+                const ModernOnboardingScreen(isForNewUser: true),
+          ),
+        );
       }
     } catch (e) {
       _showErrorSnackBar('Failed to complete profile. Please try again.');

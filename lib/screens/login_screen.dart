@@ -280,7 +280,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final credential = await _authService.signInWithGoogle();
+      // Force account picker to allow different account selection
+      final credential =
+          await _authService.signInWithGoogle(forceAccountPicker: true);
 
       if (credential != null && mounted) {
         Navigator.pushReplacementNamed(context, '/home');

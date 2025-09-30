@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../models/enums.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
+import '../services/notification_service.dart';
+import '../widgets/live_alerts_overlay.dart';
 import 'notification_detail_screen.dart';
 
-class NotificationsScreen extends StatefulWidget {
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
 
   @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
+  ConsumerState<NotificationsScreen> createState() =>
+      _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen>
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late AnimationController _fabAnimationController;
   String _selectedFilter = 'All';
+  List<AppNotification> _notifications = [];
+  bool _isLoading = true;
+  bool _hasPermission = false;
+  StreamSubscription<AppNotification>? _notificationSubscription;
 
   final List<String> _filters = [
     'All',
@@ -22,78 +29,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     'Important',
     'Financial',
     'Social'
-  ];
-
-  // Demo notification data
-  final List<NotificationItem> _notifications = [
-    NotificationItem(
-      notificationData: NotificationData(
-        id: '1',
-        appName: 'GPay',
-        appIcon: '💳',
-        title: 'Payment Reminder',
-        body: 'Your electricity bill of ₹2,450 is due tomorrow.',
-        bigText: 'Pay now to avoid late charges. Due date: Tomorrow',
-        category: 'Financial',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 30)),
-        isRead: false,
-        priority: PriorityLevel.high,
-        aiSummary: 'Electricity bill payment reminder - high priority',
-        sentiment: 'Neutral',
-        urgency: 'High',
-        requiresAction: true,
-        containsPersonalInfo: true,
-        suggestedActions: [],
-        relatedNotifications: [],
-      ),
-      isReadLocal: false,
-    ),
-    NotificationItem(
-      notificationData: NotificationData(
-        id: '2',
-        appName: 'WhatsApp',
-        appIcon: '💬',
-        title: 'John Doe',
-        body: 'Hey! Are we still on for the meeting tomorrow?',
-        bigText:
-            'John Doe: Hey! Are we still on for the meeting tomorrow? Please let me know by tonight.',
-        category: 'Social',
-        timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-        isRead: true,
-        priority: PriorityLevel.medium,
-        aiSummary: 'Meeting confirmation request from John',
-        sentiment: 'Neutral',
-        urgency: 'Medium',
-        requiresAction: true,
-        containsPersonalInfo: false,
-        suggestedActions: [],
-        relatedNotifications: [],
-      ),
-      isReadLocal: true,
-    ),
-    NotificationItem(
-      notificationData: NotificationData(
-        id: '3',
-        appName: 'Zomato',
-        appIcon: '🍔',
-        title: 'Order Delivered',
-        body: 'Your order from Pizza Corner has been delivered successfully!',
-        bigText:
-            'Thank you for choosing Zomato. Rate your order and delivery experience.',
-        category: 'General',
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-        isRead: true,
-        priority: PriorityLevel.low,
-        aiSummary: 'Food delivery confirmation - order completed',
-        sentiment: 'Positive',
-        urgency: 'Low',
-        requiresAction: false,
-        containsPersonalInfo: false,
-        suggestedActions: [],
-        relatedNotifications: [],
-      ),
-      isReadLocal: true,
-    ),
   ];
 
   @override
@@ -110,12 +45,142 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
     _animationController.forward();
     _fabAnimationController.forward();
+    _loadNotifications();
+
+    // Listen to real-time notifications
+    _notificationSubscription = NotificationService.notificationStream.listen(
+      (notification) {
+        if (mounted) {
+          setState(() {
+            _notifications.insert(0, notification);
+          });
+        }
+      },
+    );
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Check if we have notification permission
+      final hasPermission =
+          await NotificationService.hasNotificationPermission();
+      setState(() {
+        _hasPermission = hasPermission;
+      });
+
+      if (hasPermission) {
+        // Load real notifications from system
+        final notifications =
+            await NotificationService.getNotifications(limit: 50);
+        setState(() {
+          _notifications = notifications;
+        });
+      } else {
+        // Show permission request message
+        setState(() {
+          _notifications = [];
+        });
+      }
+    } catch (e) {
+      print('Error loading notifications: $e');
+      // Fallback to empty list and show error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load notifications: ${e.toString()}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      setState(() {
+        _notifications = [];
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    final granted = await NotificationService.requestNotificationPermission();
+    if (granted) {
+      _loadNotifications();
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text('Marking all notifications as read...'),
+            ],
+          ),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+
+      // Mark all notifications as read
+      await NotificationService.markAllAsRead();
+
+      // Update UI state
+      setState(() {
+        _notifications = _notifications.map((notification) {
+          return notification.copyWith(isRead: true);
+        }).toList();
+      });
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'All ${_notifications.length} notifications marked as read',
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('Failed to mark notifications as read: ${e.toString()}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _fabAnimationController.dispose();
+    _notificationSubscription?.cancel();
     super.dispose();
   }
 
@@ -126,15 +191,92 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAnimatedAppBar(),
-      body: Column(
+      body: Stack(
         children: [
-          _buildFilterChips(),
-          Expanded(
-            child: _buildNotificationsList(filteredNotifications),
+          // Main content
+          Column(
+            children: [
+              _buildFilterChips(),
+              Expanded(
+                child: _isLoading
+                    ? _buildLoadingState()
+                    : !_hasPermission
+                        ? _buildPermissionRequest()
+                        : _buildNotificationsList(filteredNotifications),
+              ),
+            ],
           ),
+          // Live alerts overlay
+          const LiveAlertsOverlay(),
         ],
       ),
       floatingActionButton: _buildAnimatedFAB(),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading notifications...'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPermissionRequest() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.error.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.notifications_off,
+            size: 48,
+            color: Theme.of(context).colorScheme.error,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Notification Access Required',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'To show real notifications from all your apps, please grant notification listener permission.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _requestNotificationPermission,
+            icon: const Icon(Icons.settings),
+            label: const Text('Grant Permission'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -187,6 +329,28 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               ).animate(CurvedAnimation(
                 parent: _animationController,
                 curve: const Interval(0.4, 1.0, curve: Curves.elasticOut),
+              )),
+              child: IconButton(
+                icon: Icon(
+                  Icons.mark_email_read,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                onPressed: _markAllAsRead,
+                tooltip: 'Mark all as read',
+              ),
+            );
+          },
+        ),
+        AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            return ScaleTransition(
+              scale: Tween<double>(
+                begin: 0.0,
+                end: 1.0,
+              ).animate(CurvedAnimation(
+                parent: _animationController,
+                curve: const Interval(0.5, 1.0, curve: Curves.elasticOut),
               )),
               child: IconButton(
                 icon: Icon(
@@ -292,7 +456,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     );
   }
 
-  Widget _buildNotificationsList(List<NotificationItem> notifications) {
+  Widget _buildNotificationsList(List<AppNotification> notifications) {
     if (notifications.isEmpty) {
       return _buildEmptyState();
     }
@@ -338,9 +502,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     );
   }
 
-  Widget _buildNotificationCard(NotificationItem notificationItem) {
-    final notification = notificationItem.notificationData;
-
+  Widget _buildNotificationCard(AppNotification notification) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Hero(
@@ -361,13 +523,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: notificationItem.isReadLocal
+                  color: notification.isRead
                       ? Theme.of(context).colorScheme.outline
                       : Theme.of(context)
                           .colorScheme
                           .primary
                           .withValues(alpha: 0.8),
-                  width: notificationItem.isReadLocal ? 1.5 : 2,
+                  width: notification.isRead ? 1.5 : 2,
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -392,7 +554,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                         ),
                         child: Center(
                           child: Text(
-                            notification.appIcon,
+                            notification.appIcon ??
+                                notification.appName
+                                    .substring(0, 1)
+                                    .toUpperCase(),
                             style: const TextStyle(fontSize: 20),
                           ),
                         ),
@@ -418,7 +583,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                   _getTimeAgo(notification.timestamp),
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
-                                if (!notificationItem.isReadLocal) ...[
+                                if (!notification.isRead) ...[
                                   const SizedBox(width: 8),
                                   Container(
                                     width: 8,
@@ -451,7 +616,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    notification.body,
+                    notification.displayContent,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                           height: 1.4,
@@ -459,47 +624,35 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (notification.priority == PriorityLevel.high) ...[
+                  if (notification.priority == NotificationPriority.high ||
+                      notification.priority == NotificationPriority.urgent) ...[
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.errorContainer,
+                        color: notification.priority ==
+                                NotificationPriority.urgent
+                            ? Theme.of(context).colorScheme.errorContainer
+                            : Theme.of(context).colorScheme.secondaryContainer,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'High Priority',
+                        notification.priority == NotificationPriority.urgent
+                            ? 'Urgent'
+                            : 'High Priority',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onErrorContainer,
+                              color: notification.priority ==
+                                      NotificationPriority.urgent
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onErrorContainer
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSecondaryContainer,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
-                    ),
-                  ],
-                  if (notification.requiresAction) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.priority_high,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Action Required',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.secondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                      ],
                     ),
                   ],
                 ],
@@ -560,25 +713,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           )),
           child: FloatingActionButton(
             backgroundColor: Theme.of(context).colorScheme.primary,
-            onPressed: () {
-              // Mark all as read
-              setState(() {
-                for (var notificationItem in _notifications) {
-                  notificationItem.isReadLocal = true;
-                }
-              });
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('All notifications marked as read'),
-                  backgroundColor: Theme.of(context).colorScheme.tertiary,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              );
-            },
+            onPressed: _markAllAsRead,
             child: Icon(
               Icons.done_all,
               color: Theme.of(context).colorScheme.onPrimary,
@@ -589,25 +724,44 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     );
   }
 
-  List<NotificationItem> _getFilteredNotifications() {
+  List<AppNotification> _getFilteredNotifications() {
     switch (_selectedFilter) {
       case 'Unread':
-        return _notifications.where((n) => !n.isReadLocal).toList();
+        return _notifications.where((n) => !n.isRead).toList();
       case 'Important':
         return _notifications
-            .where((n) => n.notificationData.priority == PriorityLevel.high)
+            .where((n) =>
+                n.priority == NotificationPriority.high ||
+                n.priority == NotificationPriority.urgent)
             .toList();
       case 'Financial':
         return _notifications
-            .where((n) => n.notificationData.category == 'Financial')
+            .where((n) => _isFinancialApp(n.packageName))
             .toList();
       case 'Social':
         return _notifications
-            .where((n) => n.notificationData.category == 'Social')
+            .where((n) => _isSocialApp(n.packageName))
             .toList();
       default:
         return _notifications;
     }
+  }
+
+  bool _isFinancialApp(String packageName) {
+    return packageName.contains('pay') ||
+        packageName.contains('bank') ||
+        packageName.contains('wallet') ||
+        packageName.contains('finance') ||
+        packageName.contains('money');
+  }
+
+  bool _isSocialApp(String packageName) {
+    return packageName.contains('whatsapp') ||
+        packageName.contains('telegram') ||
+        packageName.contains('facebook') ||
+        packageName.contains('instagram') ||
+        packageName.contains('twitter') ||
+        packageName.contains('social');
   }
 
   String _getTimeAgo(DateTime timestamp) {

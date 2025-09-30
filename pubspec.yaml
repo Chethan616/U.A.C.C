@@ -1,4 +1,4 @@
-name: uacc
+name: cairo
 description: "Universal AI Call Companion - Samsung PRISM Hackathon Project"
 publish_to: 'none'
 
@@ -19,6 +19,7 @@ dependencies:
 
   # UI and Icons
   cupertino_icons: ^1.0.8
+  liquid_glass_renderer: ^0.1.1-dev.10
   
   # Firebase Services
   firebase_core: ^3.6.0
@@ -52,6 +53,9 @@ dependencies:
   # Local Notifications
   flutter_local_notifications: ^17.2.3
   
+  # Live Activities
+  live_activities: ^2.4.2
+  
   # HTTP and Network
   http: ^1.2.2
   dio: ^5.7.0
@@ -79,6 +83,7 @@ dependencies:
   image_picker: ^1.1.2
   image: ^4.2.0
   flutter_svg: ^2.0.10+1
+  lottie: ^3.1.2
   
   # Security
   local_auth: ^2.3.0
@@ -115,3 +120,4 @@ flutter:
     - assets/icons/
     - assets/sounds/
     - assets/fonts/
+    - assets/animations/

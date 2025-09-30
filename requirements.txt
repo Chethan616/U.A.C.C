@@ -1,24 +1,21 @@
-# Core ASR / NLP
-openai==1.45.0          # OpenAI API (summarization, embeddings, etc.)
-transformers==4.44.2    # HuggingFace transformers (LLaMA, BERT, Mistral)
-torch==2.4.1            # PyTorch backend
-sentencepiece==0.2.0    # Tokenization support (LLaMA/Mistral)
+# requirements.txt
+# This project is primarily Flutter (Dart) + Firebase + a Node.js Cloud Function.
+# Example (uncomment as needed):
+# google-cloud-firestore==2.16.0
+# google-generativeai==0.8.3  # Optional: Python experiments with Gemini models (primary usage via Node Cloud Function)
 
-# Whisper speech-to-text
-whisper==1.1.10
-torchaudio==2.4.1
 
-# Server framework (if using Python backend with n8n/FastAPI)
-fastapi==0.115.0
-uvicorn==0.31.0
+# U.A.C.C optional Python tooling dependencies
+# -------------------------------------------------------------
+# Core project is Flutter + Firebase + Node.js Functions.
+# Python is OPTIONAL for experiments (data analysis, ML, automation).
+# Keep this file lean; only add what you actually use.
+# -------------------------------------------------------------
 
-# Firebase integration
-firebase-admin==6.5.0
+# --- Observability / Admin Scripts (uncomment as needed) ---
+# google-cloud-firestore==2.16.0    # Firestore admin scripts
+# google-cloud-storage==2.18.0      # Storage maintenance scripts
+# firebase-admin==6.5.0             # General admin utilities (Python)
 
-# Data handling
-numpy==2.1.1
-pandas==2.2.2
-
-# Utilities
-python-dotenv==1.0.1    # Load .env configs
-requests==2.32.3
+#--ai api keys
+#gemini 2.5 flash keys

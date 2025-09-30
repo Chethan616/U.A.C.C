@@ -36,60 +36,74 @@ class CallStateReceiver : BroadcastReceiver() {
         
         Log.d(TAG, "Phone state changed: $state, number: $phoneNumber")
         
-        // Send call state to platform channel
-        LiveActivityChannel.sendCallStateChanged(state ?: "unknown", phoneNumber)
+        // Send call state to platform channel for Flutter
+        CallStateChannel.sendCallStateChanged(state ?: "unknown", phoneNumber)
         
         when (state) {
             TelephonyManager.EXTRA_STATE_OFFHOOK -> {
-                // Call is active - start live activity service
-                startLiveActivityService(context)
+                // Call is active - start Dynamic Island transcript service
+                Log.d(TAG, "Call is active - starting Dynamic Island transcript service")
+                startTranscriptService(context)
             }
             TelephonyManager.EXTRA_STATE_IDLE -> {
-                // Call ended - service will handle cleanup automatically
-                Log.d(TAG, "Call ended - service will handle cleanup")
+                // Call ended - stop Dynamic Island transcript service
+                Log.d(TAG, "Call ended - stopping Dynamic Island transcript service")
+                stopTranscriptService(context)
             }
             TelephonyManager.EXTRA_STATE_RINGING -> {
-                // Incoming call - prepare service but don't show activity yet
-                Log.d(TAG, "Incoming call ringing")
+                // Incoming call - prepare service but don't show island yet
+                Log.d(TAG, "Incoming call ringing - preparing service")
             }
         }
     }
     
     private fun handleBootCompleted(context: Context) {
-        Log.d(TAG, "Device boot completed")
-        
-        // Auto-start live activity service on boot
-        try {
-            LiveActivityService.startService(context)
-            Log.d(TAG, "Auto-started live activity service on boot")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to auto-start live activity service on boot", e)
-        }
+        Log.d(TAG, "Device boot completed - Dynamic Island ready")
     }
     
     private fun handlePackageReplaced(context: Context) {
-        Log.d(TAG, "Package replaced/updated")
-        
-        // Restart service after app update
+        Log.d(TAG, "Package replaced/updated - Dynamic Island ready")
+    }
+    
+    private fun startTranscriptService(context: Context) {
         try {
-            LiveActivityService.startService(context)
-            Log.d(TAG, "Restarted live activity service after package update")
+            // Check if we have overlay permission first
+            if (!Settings.canDrawOverlays(context)) {
+                Log.w(TAG, "Cannot start transcript service - missing overlay permission")
+                return
+            }
+            
+            // Start Dynamic Island overlay service with transcript plugin
+            val islandIntent = Intent(context, com.example.uacc.dynamicisland.service.IslandOverlayService::class.java)
+            islandIntent.putExtra("action", "startTranscript")
+            context.startService(islandIntent)
+            
+            // Start call transcript service for speech recognition
+            val transcriptIntent = Intent(context, CallTranscriptService::class.java)
+            transcriptIntent.putExtra("action", "startTranscription")
+            context.startService(transcriptIntent)
+            
+            Log.d(TAG, "🏝️ Started Dynamic Island transcript service for live call transcription")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to restart live activity service after package update", e)
+            Log.e(TAG, "Failed to start Dynamic Island transcript service", e)
         }
     }
     
-    private fun startLiveActivityService(context: Context) {
+    private fun stopTranscriptService(context: Context) {
         try {
-            LiveActivityService.startService(context)
-            Log.d(TAG, "Started live activity service for active call")
+            // Stop call transcript service
+            val transcriptIntent = Intent(context, CallTranscriptService::class.java)
+            transcriptIntent.putExtra("action", "stopTranscription")
+            context.startService(transcriptIntent)
+            
+            // Stop Dynamic Island transcript
+            val islandIntent = Intent(context, com.example.uacc.dynamicisland.service.IslandOverlayService::class.java)
+            islandIntent.putExtra("action", "stopTranscript")
+            context.startService(islandIntent)
+            
+            Log.d(TAG, "🏝️ Stopped Dynamic Island transcript service")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start live activity service", e)
-            LiveActivityChannel.sendError(
-                "SERVICE_ERROR", 
-                "Failed to start live activity service", 
-                e.message
-            )
+            Log.e(TAG, "Failed to stop Dynamic Island transcript service", e)
         }
     }
 }

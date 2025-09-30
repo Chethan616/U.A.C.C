@@ -1,79 +1,151 @@
-# U.A.C.C  
+## PLEASE FOLLOW SETUP.MD AND GOOGLE_WORKSPACE_SEUP.MD AND THIS FILE AND ALSO REQUIREMENTS.TXT
+
+# U.A.C.C (Cairo)
 ## Unified AI Communication Companion  
-*Revolutionizing mobile communication with AI – Samsung PRISM project*  
+*Revolutionizing mobile communication with on‑device + Firebase intelligence – Samsung PRISM project*
 
 ---
-
 ## Overview
-The **Unified AI Communication Companion (U.A.C.C.)** is a **multi-platform communication intelligence system**.  
-It integrates **real-time speech processing**, **notification orchestration**, and a **unified task dashboard** into one secure workflow.  
+The **Unified AI Communication Companion (U.A.C.C.)** is a **privacy-aware Android AI assistant** that unifies:
+- Real‑time call understanding
+- Intelligent notification triage
+- Action & task surfacing via expressive widgets
 
-Core principle: **Reduce cognitive overload** by converting unstructured communication (calls + notifications) into **actionable, prioritized data streams**.  
+Core principle: **Reduce cognitive overload** by transforming volatile streams (calls, notifications, schedules) into **concise, actionable context** that lives locally first, and syncs securely to Firebase.
 
-Target device: **Samsung Android ecosystem** (PRISM research program).  
+Target: **Samsung / Android ecosystem** (optimized for AMOLED + low power overlays).
 
 ---
-
 ## Functional Capabilities
 ### 1. AI Call Companion
-- **Input:** Call audio (via Samsung Speech SDK / Android Telephony APIs).  
-- **Processing:**
-  - On-device ASR (Whisper, TensorFlow Lite model) or offloaded to n8n pipeline.  
-  - Post-processing with transformer summarizer (LLaMA/Mistral/BERT).  
-  - Contextual semantic search → "What was said in my last meeting?"  
-- **Output:** Transcript JSON + summary string + extracted `actions[]`.  
+- **Input:** Live call audio hooks / microphone session (user authorized)
+- **Pipeline:** On‑device ASR (Whisper / TFLite) → semantic condensation → key actions extraction
+- **Output:** Structured transcript + bullet summary + `actions[]`
+- **Enhancement (optional):** Cloud `geminiProxy` function for higher‑order synthesis when network available (Gemini model). No other LLM providers are embedded.
 
-### 2. Notification Companion
-- **Input:** Android Notification Listener Service stream.  
-- **Processing:**  
-  - Rule-based + ML priority classification.  
-  - Deduplication + grouping.  
-  - Summarization pipeline (n8n + LLM).  
-- **Output:** Prioritized notification digests.  
+### 2. Notification Intelligence
+- **Input:** Android Notification Listener stream
+- **Processing:** Rule + lightweight ML scoring → grouping → priority labeling
+- **Output:** Digest feed + suppression of low‑signal noise
 
-### 3. Unified Dashboard
-- **Mobile (Flutter):**
-  - Card-based summaries (calls, notifications, calendar).  
-  - Offline cache + Firestore sync.  
-- **Web (Next.js):**
-  - Historical digests + search.  
-  - Task list & calendar integration.  
-  - Visualization widgets (charts, heatmaps).  
+### 3. Expressive Widgets & Surfaces
+- `CookieCalendarWidget` (AMOLED adaptive, grayscale energy frugal)
+- `TasksWidget` (dynamic ticket container shape, real‑time sync)
+- Dynamic overlay ("island" style) for ephemeral call / task state cues
 
-### 4. Security & Privacy
-- **On-device:** Initial ASR + priority classification → reduces external data exposure.  
-- **Transport:** HTTPS + Firebase Auth tokens.  
-- **Storage:** Firestore per-user namespace + security rules.  
-- **E2E Encryption (optional):** Audio blob encryption before upload.  
+### 4. Privacy & Security
+- **Local First:** Classification + initial ASR remains on device
+- **Selective Sync:** Only distilled artifacts (summary, task objects) persisted to Firestore
+- **Transport:** HTTPS + Firebase Auth
+- **Isolation:** Per‑user Firestore namespace; no multi‑tenant leakage
+- **Crash & Metrics:** Crashlytics + Analytics (minimal PII)
 
 ---
-
-## System Architecture
-
+## Current Architecture (Simplified)
 ```text
-+--------------------+         +--------------------+         +--------------------+
-|   Flutter Client   |         |        n8n         |         |     Next.js Web    |
-| (Samsung Device)   |         | (Workflow Engine)  |         |     Dashboard      |
-|--------------------|         |--------------------|         |--------------------|
-| - Call capture     | POST -->| - Webhook ingest   |---> API | - Summaries view   |
-| - Notif capture    |         | - ASR (Whisper)    |         | - Task mgmt        |
-| - Local TFLite     |         | - Summarizer (LLM) |         | - Analytics        |
-| - Push UI          |         | - Action extractor |         | - Calendar sync    |
-+--------------------+         +--------------------+         +--------------------+
-          |                                |                               |
-          v                                v                               v
-                        +-----------------------------------+
-                        |             Firebase              |
-                        |  Auth | Firestore | Storage | FCM |
-                        +-----------------------------------+
-
+ ┌──────────────────────────────────────────────────────────┐
+ |                      Android (Flutter)                   |
+ |  UI (Riverpod/Provider)  •  Widgets (Glance)  • Overlays |
+ |  ──────────────────────────────────────────────────────  |
+ |  Local ASR (TFLite) → Summarizer → Action Extractor      |
+ |  Notification Listener → Priority Model / Rules          |
+ |  Storage Cache (SharedPreferences / Secure Storage)      |
+ └──────────────┬───────────────────────────────┬──────────┘
+                │                               │
+        Firestore (structured tasks)     FCM (reactive refresh)
+                │                               │
+        Cloud Function: geminiProxy  (Gemini augmentation / fallback)
+                │
+        (Secret Manager / Admin SDK auto credentials; GEMINI_API_KEY server-only)
 ```
-## Deployment Targets
 
-Mobile (Flutter): Android APK → Samsung Galaxy devices.
+---
+## Technology Stack
+| Layer | Technology |
+|-------|------------|
+| Mobile Core | Flutter (Dart 3.6) |
+| Native Enhancements | Kotlin (Glance widgets, overlay services) |
+| State Mgmt | Riverpod + Provider hybrid |
+| AI (on device) | Whisper/TFLite placeholder integration (future) |
+| Cloud Augmentation | Firebase Cloud Function (`geminiProxy`, Node.js 18) |
+| Backend Services | Firebase Auth, Firestore, Storage, FCM, Crashlytics, Analytics |
+| Assets | Lottie, SVG, custom fonts, grayscale adaptive theming |
 
-Web (Next.js): Vercel deployment → auto CI/CD from GitHub.
+---
+## Repository Structure (Key)
+```
+lib/                # Flutter application code
+android/            # Native Android layer (widgets, services, platform code)
+functions/          # Node.js Cloud Function (Gemini proxy)
+assets/             # Images, animations, fonts, sounds
+firebase.json       # Firebase multi-platform + functions config
+SETUP.md            # Full environment + deployment guide
+requirements.txt    # Optional Python tooling (not required for runtime)
+```
 
-Automation (n8n): Docker Compose / n8n.cloud → connected via service account.
+---
+## Cloud Function: geminiProxy
+Purpose: Optional augmentation (advanced summarization / semantic expansion) while keeping primary UX functional offline.
 
-Firebase: Managed (Auth, Firestore, Storage, FCM)
+Minimal pattern:
+```js
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+admin.initializeApp();
+
+exports.geminiProxy = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Login required');
+  return { refined: `Summary(v1): ${data?.draft?.slice(0,120)}...` };
+});
+```
+Secrets: `GEMINI_API_KEY` is never embedded in the client; only loaded via Secret Manager on the server.
+
+---
+## Configuration & Setup
+See `SETUP.md` for: prerequisites, Firebase activation, secrets strategy, running & building, CI suggestions.
+
+> **Crashlytics & offline builds:** Release builds try to upload a mapping file. If you're offline or behind a firewall, set `SKIP_CRASHLYTICS_UPLOAD=true` (or pass `-PskipCrashlyticsUpload`) before running `flutter build apk --release` so the build can finish, then unset it for CI/production.
+
+Fast start:
+```powershell
+flutter pub get
+flutter run --debug
+```
+
+---
+## Theming & AMOLED Strategy
+- Widgets and overlays use near‑black `#121212` base + restrained grayscale spectrum
+- Minimizes OLED power + visual noise
+- Accent color reserved for semantic emphasis (task status, active capture state)
+
+---
+## Roadmap (Working)
+- On‑device summarizer refinement pipeline
+- Offline embeddings for semantic recall (vector store local)
+- Adaptive priority model (temporal + behavioral signals)
+- Accessibility speech command palette
+- End‑to‑end encrypted transcript blob option
+
+---
+## Contributing
+1. Branch: `feature/<slug>`
+2. Run: `flutter analyze && flutter test`
+3. Provide screenshot / screen recording for UI changes
+4. Avoid committing service account / secret files (enforced via `.gitignore`)
+
+---
+## Security Notes
+- Service account JSONs are ignored; if exposed rotate immediately
+- Only distilled structured data leaves device by default
+- GEMINI_API_KEY accessed only within Cloud Function runtime
+
+---
+## License / Attribution
+Samsung PRISM research context + third‑party OSS under respective licenses.
+
+---
+## Support
+Open an issue with: environment, reproduction steps, logs (sanitized). For sensitive disclosures, use private channel.
+
+---
+*Focused. Local-first. Assistive.*

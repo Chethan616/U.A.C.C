@@ -1,46 +1,111 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# ---- U.A.C.C Unified Ignore File ----
+# Combines standard Flutter, Android, iOS, Node (functions), and security exclusions.
 
-# IntelliJ related
+# ---- Core Flutter / Dart ----
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# (Optional) If you want reproducible dependency resolution, remove this ignore.
+# pubspec.lock
+
+# ---- Generated / Symbol / Mapping ----
+app.*.symbols
+app.*.map.json
+
+# ---- IDE / Editor ----
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
+.vscode/
+.atom/
+.history/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# ---- OS Files ----
+.DS_Store
+Thumbs.db
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
+# ---- Android Specific ----
+android/.gradle/
+android/**/generated/
+android/**/intermediates/
+android/**/outputs/
+android/**/release/
+android/captures/
+android/local.properties
+.gradle/
 
-# Symbolication related
-app.*.symbols
+# ---- iOS / macOS ----
+ios/Pods/
+ios/.symlinks/
+ios/DerivedData/
+ios/Runner.xcworkspace/
+macos/Pods/
+macos/Flutter/ephemeral/
 
-# Obfuscation related
-app.*.map.json
+# Xcode user data
+**/xcuserdata/
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-\n# Secrets and credentials\n*.json\nuacc-*.json\nlib/services/api_config_service.dart\n
+# ---- Firebase / Google Config (environment-specific) ----
+.google-services.json
+GoogleService-Info.plist
+
+# ---- Service Account / Secrets ----
+*serviceAccount*.json
+*uacc-uacc-*.json
+*firebase-adminsdk*.json
+client_secret_*.json
+*.keystore
+*.jks
+*.pem
+*.p12
+*.crt
+*.key
+# Custom project secret
+ai.json
+lib/services/api_config_service.dart
+
+# ---- Node Functions ----
+functions/node_modules/
+functions/lib/
+functions/.eslintcache
+functions/.env
+functions/*-debug.log
+
+# ---- Logs / Temp ----
+*.log
+logs/
+tmp/
+
+# ---- Reports / Coverage ----
+coverage/
+coverage.lcov
+report.html
+
+# ---- Asset / Tool Artifacts ----
+**/generated_plugin_registrant.dart
+
+# ---- Python (aux tooling) ----
+.venv/
+__pycache__/
+*.py[cod]
+
+# ---- Misc Build Caches ----
+.android/
+.ios/
+
+# ---- Custom / Windows Quirks ----
+CON
+
+# ---- Security Catch-All ----
+*PRIVATE_KEY*
+
+# End of .gitignore

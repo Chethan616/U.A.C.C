@@ -10,6 +10,7 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/profile_avatar.dart';
 import '../theme/theme_provider.dart';
+import 'enhanced_transcript_test_screen.dart';
 
 class ProfileTab extends ConsumerWidget {
   const ProfileTab({Key? key}) : super(key: key);
@@ -298,6 +299,15 @@ class ProfileTab extends ConsumerWidget {
                       ),
                       _buildSettingsItem(
                         context,
+                        Icons.switch_account,
+                        'Switch Account',
+                        'Sign in with a different account',
+                        () {
+                          _switchAccount(context, ref);
+                        },
+                      ),
+                      _buildSettingsItem(
+                        context,
                         Icons.logout,
                         'Sign Out',
                         'Sign out of your account',
@@ -312,7 +322,6 @@ class ProfileTab extends ConsumerWidget {
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
-            // Live Activity Widget at bottom
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -327,35 +336,56 @@ class ProfileTab extends ConsumerWidget {
                     ),
                   ),
                   child: InkWell(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/live-activity-setup');
-                    },
                     borderRadius: BorderRadius.circular(16),
-                    child: Padding(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const EnhancedTranscriptTestScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
                       padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context)
+                                .colorScheme
+                                .secondaryContainer
+                                .withOpacity(0.6),
+                            Theme.of(context)
+                                .colorScheme
+                                .secondaryContainer
+                                .withOpacity(0.3),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
                       child: Row(
                         children: [
                           Container(
-                            width: 60,
-                            height: 60,
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Theme.of(context).colorScheme.primary,
-                                  Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.7),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
                               borderRadius: BorderRadius.circular(12),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .secondary
+                                  .withOpacity(0.2),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .secondary
+                                    .withOpacity(0.3),
+                              ),
                             ),
                             child: Icon(
-                              Icons.picture_in_picture_alt_rounded,
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              Icons.record_voice_over,
                               size: 28,
+                              color: Theme.of(context).colorScheme.secondary,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -364,71 +394,47 @@ class ProfileTab extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Live Activity',
+                                  'Enhanced Call Transcript',
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium
                                       ?.copyWith(
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
                                       ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Native ongoing notifications like Zomato',
+                                  'Real-time transcription with speaker color coding - Incoming: Blue, Outgoing: White',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodyMedium
                                       ?.copyWith(
                                         color: Theme.of(context)
                                             .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.7),
+                                            .onSurfaceVariant,
                                       ),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.new_releases_rounded,
-                                        size: 14,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onPrimaryContainer,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'NEW',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onPrimaryContainer,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 16,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.5),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .secondary
+                                  .withOpacity(0.1),
+                            ),
+                            child: Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
                           ),
                         ],
                       ),
@@ -904,6 +910,69 @@ class ProfileTab extends ConsumerWidget {
     );
   }
 
+  void _switchAccount(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Switch Account',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+          ),
+          content: const Text(
+            'You will be signed out and can sign in with a different account.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+
+                try {
+                  final authService = ref.read(authServiceProvider);
+
+                  // Use the enhanced sign out method for account switching
+                  await authService.signOutWithAccountSwitch();
+
+                  // Invalidate all providers to clear cached data
+                  ref.invalidate(currentUserProvider);
+                  ref.invalidate(currentUserProfileProvider);
+                  ref.invalidate(isSignedInProvider);
+
+                  // The AuthWrapper will automatically handle navigation
+                  // based on the auth state change
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text(
+                          'Failed to switch account. Please try again.',
+                        ),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Switch Account'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _signOut(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -931,17 +1000,20 @@ class ProfileTab extends ConsumerWidget {
             FilledButton(
               onPressed: () async {
                 Navigator.of(context).pop();
+
                 try {
                   final authService = ref.read(authServiceProvider);
-                  await authService.signOut();
 
-                  // Navigate to login screen and clear stack
-                  if (context.mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/login',
-                      (route) => false,
-                    );
-                  }
+                  // Use the enhanced sign out method
+                  await authService.signOutWithAccountSwitch();
+
+                  // Invalidate all providers to clear cached data
+                  ref.invalidate(currentUserProvider);
+                  ref.invalidate(currentUserProfileProvider);
+                  ref.invalidate(isSignedInProvider);
+
+                  // The AuthWrapper will automatically handle navigation
+                  // based on the auth state change
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

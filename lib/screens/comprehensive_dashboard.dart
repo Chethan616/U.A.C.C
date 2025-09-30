@@ -7,24 +7,24 @@ class ComprehensiveDashboard extends ConsumerStatefulWidget {
   const ComprehensiveDashboard({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<ComprehensiveDashboard> createState() => _ComprehensiveDashboardState();
+  ConsumerState<ComprehensiveDashboard> createState() =>
+      _ComprehensiveDashboardState();
 }
 
 class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
     with TickerProviderStateMixin {
-  
   late AnimationController _pulseController;
   late AnimationController _slideController;
   late Animation<double> _pulseAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
   bool _isRecording = false;
   String _currentTranscript = '';
 
   @override
   void initState() {
     super.initState();
-    
+
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
@@ -33,35 +33,22 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.elasticOut,
-    ));
-    
+    ).animate(
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.elasticOut,
+      ),
+    );
+
     _slideController.forward();
     _requestPermissions();
-  }
-
-  Future<void> _requestPermissions() async {
-    // Show permission request screen if needed
-    final hasPermissions = await _checkAllPermissions();
-    if (!hasPermissions) {
-      if (mounted) {
-        Navigator.pushNamed(context, '/permission-request');
-      }
-    }
-  }
-
-  Future<bool> _checkAllPermissions() async {
-    // Mock permission check - in real app would check actual permissions
-    return true;
   }
 
   @override
@@ -70,7 +57,6 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
       backgroundColor: const Color(0xFF0A0A0A),
       body: Stack(
         children: [
-          // Background gradient
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -85,8 +71,6 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
               ),
             ),
           ),
-          
-          // Main content
           SafeArea(
             child: SlideTransition(
               position: _slideAnimation,
@@ -100,8 +84,6 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
               ),
             ),
           ),
-          
-          // Live transcript overlay
           if (_isRecording || _currentTranscript.isNotEmpty)
             LiveTranscriptOverlay(
               currentTranscript: _currentTranscript,
@@ -112,6 +94,105 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
         ],
       ),
     );
+  }
+
+  Widget _buildQuickActions() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      color: colorScheme.surface.withOpacity(0.96),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: colorScheme.outline.withOpacity(0.15)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Quick Actions',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 600;
+                final double itemWidth = isCompact
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - 16) / 2;
+
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    SizedBox(
+                      width: itemWidth,
+                      child: _buildActionCard(
+                        'Call Logs',
+                        Icons.call,
+                        'View & analyze calls',
+                        colorScheme.primary,
+                        () => Navigator.pushNamed(context, '/call-logs'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: itemWidth,
+                      child: _buildActionCard(
+                        'Notifications',
+                        Icons.notifications_active,
+                        'Smart summaries',
+                        colorScheme.secondary,
+                        () => Navigator.pushNamed(context, '/notifications'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: itemWidth,
+                      child: _buildActionCard(
+                        'Calendar',
+                        Icons.calendar_today,
+                        'Meetings & tasks',
+                        colorScheme.tertiary,
+                        () => Navigator.pushNamed(context, '/full-calendar'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: itemWidth,
+                      child: _buildActionCard(
+                        _isRecording ? 'Stop Recording' : 'Start Recording',
+                        _isRecording ? Icons.stop : Icons.mic,
+                        _isRecording ? 'Stop recording' : 'Voice recording',
+                        _isRecording
+                            ? colorScheme.error
+                            : colorScheme.primaryContainer,
+                        _toggleRecording,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _requestPermissions() async {
+    final hasPermissions = await _checkAllPermissions();
+    if (!hasPermissions && mounted) {
+      Navigator.pushNamed(context, '/permission-request');
+    }
+  }
+
+  Future<bool> _checkAllPermissions() async {
+    // Mock permission check - in real app would check actual permissions
+    return true;
   }
 
   Widget _buildHeader() {
@@ -156,7 +237,8 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
         const SizedBox(width: 12),
         _buildStatusChip('Listening', Colors.blue, Icons.hearing),
         const SizedBox(width: 12),
-        _buildStatusChip('Connected', const Color(0xFF6C63FF), Icons.cloud_done),
+        _buildStatusChip(
+            'Connected', const Color(0xFF6C63FF), Icons.cloud_done),
       ],
     );
   }
@@ -206,128 +288,102 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
     );
   }
 
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                'Call Logs',
-                Icons.call,
-                'View & analyze calls',
-                const Color(0xFF4CAF50),
-                () => Navigator.pushNamed(context, '/call-logs'),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildActionCard(
-                'Notifications',
-                Icons.notifications_active,
-                'Smart summaries',
-                const Color(0xFF2196F3),
-                () => Navigator.pushNamed(context, '/notifications'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                'Calendar',
-                Icons.calendar_today,
-                'Meetings & tasks',
-                const Color(0xFFFF9800),
-                () => Navigator.pushNamed(context, '/full-calendar'),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildActionCard(
-                'Start Recording',
-                _isRecording ? Icons.stop : Icons.mic,
-                _isRecording ? 'Stop recording' : 'Voice recording',
-                _isRecording ? Colors.red : const Color(0xFF6C63FF),
-                _toggleRecording,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  Widget _buildActionCard(
+    String title,
+    IconData icon,
+    String subtitle,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isRecordingCard = icon == Icons.stop || icon == Icons.mic;
+    final animation =
+        _isRecording && isRecordingCard ? _pulseController : _slideController;
+    final brightness = theme.brightness;
 
-  Widget _buildActionCard(String title, IconData icon, String subtitle, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedBuilder(
-        animation: _isRecording && icon == Icons.stop ? _pulseController : _slideController,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _isRecording && icon == Icons.stop ? _pulseAnimation.value : 1.0,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    color.withOpacity(0.2),
-                    color.withOpacity(0.1),
+    final gradientColors = [
+      color.withOpacity(brightness == Brightness.dark ? 0.28 : 0.18),
+      colorScheme.surfaceVariant
+          .withOpacity(brightness == Brightness.dark ? 0.7 : 0.95),
+    ];
+
+    final borderColor =
+        color.withOpacity(brightness == Brightness.dark ? 0.4 : 0.2);
+    final shadowColor =
+        color.withOpacity(brightness == Brightness.dark ? 0.35 : 0.15);
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final scale =
+            _isRecording && isRecordingCard ? _pulseAnimation.value : 1.0;
+
+        return Transform.scale(
+          scale: scale,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(20),
+              splashColor: color.withOpacity(0.15),
+              highlightColor: color.withOpacity(0.1),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: gradientColors,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: borderColor,
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: shadowColor,
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: color.withOpacity(0.3),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, size: 24, color: color),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(icon, size: 32, color: color),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -381,7 +437,8 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
     );
   }
 
-  Widget _buildActivityItem(String title, String time, IconData icon, Color color, String summary) {
+  Widget _buildActivityItem(
+      String title, String time, IconData icon, Color color, String summary) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -452,18 +509,25 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildStatCard('Calls Analyzed', '47', Icons.call, Colors.green)),
+            Expanded(
+                child: _buildStatCard(
+                    'Calls Analyzed', '47', Icons.call, Colors.green)),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard('Messages', '156', Icons.message, Colors.blue)),
+            Expanded(
+                child: _buildStatCard(
+                    'Messages', '156', Icons.message, Colors.blue)),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard('Time Saved', '2.5h', Icons.timer, const Color(0xFF6C63FF))),
+            Expanded(
+                child: _buildStatCard('Time Saved', '2.5h', Icons.timer,
+                    const Color(0xFF6C63FF))),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -544,9 +608,12 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
                 ],
               ),
               const SizedBox(height: 16),
-              _buildInsightItem('📞', 'You have 3 missed calls that may need follow-up'),
-              _buildInsightItem('📅', 'Schedule a meeting with John about the project update'),
-              _buildInsightItem('💡', 'Your response time to messages improved by 40% this week'),
+              _buildInsightItem(
+                  '📞', 'You have 3 missed calls that may need follow-up'),
+              _buildInsightItem('📅',
+                  'Schedule a meeting with John about the project update'),
+              _buildInsightItem('💡',
+                  'Your response time to messages improved by 40% this week'),
             ],
           ),
         ),
@@ -577,7 +644,7 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
 
   void _toggleRecording() async {
     HapticFeedback.mediumImpact();
-    
+
     if (_isRecording) {
       await _stopRecording();
     } else {
@@ -591,9 +658,9 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
         _isRecording = true;
         _currentTranscript = '';
       });
-      
+
       _pulseController.repeat(reverse: true);
-      
+
       // Show overlay
       TranscriptOverlayManager.show(
         context,
@@ -602,10 +669,9 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
         onTap: _handleOverlayTap,
         onStop: _stopRecording,
       );
-      
+
       // Simulate transcript updates
       _simulateTranscript();
-      
     } catch (e) {
       _showError('Failed to start recording: $e');
       setState(() {
@@ -618,16 +684,16 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
     setState(() {
       _isRecording = false;
     });
-    
+
     _pulseController.stop();
     _pulseController.reset();
-    
+
     HapticFeedback.heavyImpact();
-    
+
     // Keep overlay visible for a moment to show final transcript
     await Future.delayed(const Duration(seconds: 2));
     TranscriptOverlayManager.hide();
-    
+
     if (_currentTranscript.isNotEmpty) {
       _showTranscriptSaved();
     }
@@ -635,7 +701,7 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
 
   void _simulateTranscript() {
     if (!_isRecording) return;
-    
+
     final transcriptParts = [
       'Hello, how are you doing today?',
       'I wanted to discuss the project timeline with you.',
@@ -644,12 +710,12 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
       'The deadline is approaching quickly.',
       'We should coordinate with the team as well.',
     ];
-    
+
     int currentPart = 0;
-    
+
     void addNextPart() {
       if (!_isRecording || currentPart >= transcriptParts.length) return;
-      
+
       setState(() {
         if (_currentTranscript.isNotEmpty) {
           _currentTranscript += ' ${transcriptParts[currentPart]}';
@@ -657,19 +723,19 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
           _currentTranscript = transcriptParts[currentPart];
         }
       });
-      
+
       TranscriptOverlayManager.update(
         transcript: _currentTranscript,
         isRecording: _isRecording,
       );
-      
+
       currentPart++;
-      
+
       if (currentPart < transcriptParts.length) {
         Future.delayed(const Duration(seconds: 3), addNextPart);
       }
     }
-    
+
     // Start after 2 seconds
     Future.delayed(const Duration(seconds: 2), addNextPart);
   }
@@ -758,7 +824,8 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
         ListTile(
           leading: const Icon(Icons.key, color: Colors.white),
           title: const Text('API Keys', style: TextStyle(color: Colors.white)),
-          subtitle: const Text('Manage API configurations', style: TextStyle(color: Colors.white70)),
+          subtitle: const Text('Manage API configurations',
+              style: TextStyle(color: Colors.white70)),
           onTap: () {
             Navigator.pop(context);
             Navigator.pushNamed(context, '/api-keys');
@@ -766,8 +833,10 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
         ),
         ListTile(
           leading: const Icon(Icons.cloud, color: Colors.white),
-          title: const Text('Google Workspace', style: TextStyle(color: Colors.white)),
-          subtitle: const Text('Test integrations', style: TextStyle(color: Colors.white70)),
+          title: const Text('Google Workspace',
+              style: TextStyle(color: Colors.white)),
+          subtitle: const Text('Test integrations',
+              style: TextStyle(color: Colors.white70)),
           onTap: () {
             Navigator.pop(context);
             Navigator.pushNamed(context, '/workspace-test');
@@ -775,8 +844,10 @@ class _ComprehensiveDashboardState extends ConsumerState<ComprehensiveDashboard>
         ),
         ListTile(
           leading: const Icon(Icons.security, color: Colors.white),
-          title: const Text('Permissions', style: TextStyle(color: Colors.white)),
-          subtitle: const Text('Review app permissions', style: TextStyle(color: Colors.white70)),
+          title:
+              const Text('Permissions', style: TextStyle(color: Colors.white)),
+          subtitle: const Text('Review app permissions',
+              style: TextStyle(color: Colors.white70)),
           onTap: () {
             Navigator.pop(context);
             Navigator.pushNamed(context, '/permission-request');

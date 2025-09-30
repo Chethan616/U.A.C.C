@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:lottie/lottie.dart';
 import '../models/enums.dart';
 import '../services/user_service.dart';
 import '../services/call_log_service.dart' as call_service;
 import '../services/notification_service.dart';
-import '../services/task_service.dart';
+import '../services/task_service.dart' hide Task, TaskPriority;
+import '../services/tasks_service.dart' as google_tasks;
+
+import '../models/task.dart';
 import '../services/call_monitoring_service.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/upcoming_events_carousel.dart';
+import '../firebaseExports/firebase_export_coordinator.dart';
+
 import 'profile_tab.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,65 +26,66 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  final GlobalKey<_TasksTabState> _tasksTabKey = GlobalKey<_TasksTabState>();
+  late final AnimationController _fabController;
+  late final List<_NavigationItem> _navItems;
+  late final List<Widget> _screens;
   int _selectedIndex = 0;
-  late AnimationController _animationController;
-  late AnimationController _fabController;
-
-  final List<Widget> _screens = [
-    const DashboardTab(),
-    const CallsTab(),
-    const NotificationsTab(),
-    const TasksTab(),
-    const ProfileTab(),
-  ];
-
-  final List<BottomNavigationBarItem> _navItems = [
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.dashboard_outlined),
-      activeIcon: Icon(Icons.dashboard_rounded),
-      label: 'Dashboard',
-    ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.phone_outlined),
-      activeIcon: Icon(Icons.phone_rounded),
-      label: 'Calls',
-    ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.notifications_outlined),
-      activeIcon: Icon(Icons.notifications_rounded),
-      label: 'Notifications',
-    ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.task_alt_outlined),
-      activeIcon: Icon(Icons.task_alt_rounded),
-      label: 'Tasks',
-    ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.person_outline_rounded),
-      activeIcon: Icon(Icons.person_rounded),
-      label: 'Profile',
-    ),
-  ];
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
+    print(
+        '🟢 HOME SCREEN: initState method called - starting initialization...');
     _fabController = AnimationController(
-      duration: const Duration(milliseconds: 600),
       vsync: this,
-    );
-    _animationController.forward();
-    _fabController.forward();
+      duration: const Duration(milliseconds: 400),
+    )..forward();
+
+    print(
+        '🟢 HOME SCREEN: Firebase export system will only initialize when user manually triggers backup');
+
+    _navItems = [
+      _NavigationItem(
+        icon: Icon(Icons.dashboard_outlined),
+        activeIcon: Icon(Icons.dashboard),
+        label: 'Home',
+      ),
+      _NavigationItem(
+        icon: Icon(Icons.call_outlined),
+        activeIcon: Icon(Icons.call),
+        label: 'Calls',
+      ),
+      _NavigationItem(
+        icon: Icon(Icons.task_alt_outlined),
+        activeIcon: Icon(Icons.task_alt),
+        label: 'Tasks',
+      ),
+      _NavigationItem(
+        icon: Icon(Icons.notifications_outlined),
+        activeIcon: Icon(Icons.notifications),
+        label: 'Alerts',
+      ),
+      _NavigationItem(
+        icon: Icon(Icons.person_outline),
+        activeIcon: Icon(Icons.person),
+        label: 'Profile',
+      ),
+    ];
+
+    _screens = [
+      const DashboardTab(),
+      const CallsTab(),
+      TasksTab(key: _tasksTabKey),
+      const NotificationsTab(),
+      const ProfileTab(),
+    ];
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     _fabController.dispose();
     super.dispose();
   }
@@ -104,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 icon: const Icon(Icons.add),
                 label: const Text('Quick Add'),
-                heroTag: "dashboard_fab",
+                heroTag: 'dashboard_fab',
               ),
             )
           : null,
@@ -122,7 +130,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           elevation: 8,
           clipper: ShapeBorderClipper(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
             ),
           ),
           child: NavigationBar(
@@ -133,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   _selectedIndex = index;
                 });
 
-                // Handle FAB visibility
                 if (index == 0) {
                   _fabController.forward();
                 } else {
@@ -146,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   (entry) => NavigationDestination(
                     icon: entry.icon,
                     selectedIcon: entry.activeIcon,
-                    label: entry.label ?? '',
+                    label: entry.label,
                   ),
                 )
                 .toList(),
@@ -164,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context) => Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -175,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: Theme.of(context).colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -192,26 +201,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Expanded(
                   child: _buildQuickAction(
-                    'Add Call',
-                    Icons.phone_outlined,
-                    Theme.of(context).colorScheme.primary,
-                    () => Navigator.pop(context),
+                    label: 'Add Call',
+                    icon: Icons.phone_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                    onTap: () => Navigator.pop(context),
                   ),
                 ),
                 Expanded(
                   child: _buildQuickAction(
-                    'Add Task',
-                    Icons.task_alt_outlined,
-                    Theme.of(context).colorScheme.secondary,
-                    () => Navigator.pop(context),
+                    label: 'Add Task',
+                    icon: Icons.task_alt_outlined,
+                    color: Theme.of(context).colorScheme.secondary,
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Use a more robust approach to show task dialog
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _showTaskDialog(context);
+                      });
+                    },
                   ),
                 ),
                 Expanded(
                   child: _buildQuickAction(
-                    'Add Note',
-                    Icons.note_add_outlined,
-                    Theme.of(context).colorScheme.tertiary,
-                    () => Navigator.pop(context),
+                    label: 'Add Note',
+                    icon: Icons.note_add_outlined,
+                    color: Theme.of(context).colorScheme.tertiary,
+                    onTap: () => Navigator.pop(context),
                   ),
                 ),
               ],
@@ -222,10 +237,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Expanded(
                   child: _buildQuickAction(
-                    'Test Call',
-                    Icons.live_help_outlined,
-                    Colors.orange,
-                    () {
+                    label: 'Test Call',
+                    icon: Icons.live_help_outlined,
+                    color: Theme.of(context).colorScheme.error,
+                    onTap: () {
                       Navigator.pop(context);
                       CallMonitoringService.simulateIncomingCall(
                         callerName: 'Test Contact',
@@ -236,18 +251,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 Expanded(
                   child: _buildQuickAction(
-                    'View Calendar',
-                    Icons.calendar_today_outlined,
-                    Colors.green,
-                    () => Navigator.pop(context),
+                    label: 'View Calendar',
+                    icon: Icons.calendar_today_outlined,
+                    color: Theme.of(context).colorScheme.inversePrimary,
+                    onTap: () => Navigator.pop(context),
                   ),
                 ),
                 Expanded(
                   child: _buildQuickAction(
-                    'Settings',
-                    Icons.settings_outlined,
-                    Colors.grey,
-                    () => Navigator.pop(context),
+                    label: 'Settings',
+                    icon: Icons.settings_outlined,
+                    color: Theme.of(context).colorScheme.outline,
+                    onTap: () => Navigator.pop(context),
                   ),
                 ),
               ],
@@ -259,12 +274,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildQuickAction(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
+  Widget _buildQuickAction({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -280,11 +295,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
-              ),
+              child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(height: 8),
             Text(
@@ -303,6 +314,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
+
+  void _showTaskDialog(BuildContext context) {
+    // Navigate to Tasks tab and show dialog
+    setState(() {
+      _selectedIndex = 1; // Navigate to Tasks tab (assuming index 1)
+    });
+
+    // Wait for navigation to complete, then show dialog
+    Future.delayed(const Duration(milliseconds: 300), () {
+      final state = _tasksTabKey.currentState;
+      if (state != null) {
+        state.showTaskDialog();
+      }
+    });
+  }
+
+  /// Initialize Firebase Export System
+  // Removed _initializeFirebaseExportSystem - now only backup when user clicks cloud icon
+}
+
+class _NavigationItem {
+  final Icon icon;
+  final Icon activeIcon;
+  final String label;
+
+  const _NavigationItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
 }
 
 class DashboardTab extends ConsumerStatefulWidget {
@@ -360,7 +401,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
       final futures = await Future.wait([
         call_service.CallLogService.getCallStats(),
         NotificationService.getNotificationStats(),
-        TaskService.getTaskStats(),
+        _getGoogleTaskStats(), // Use Google Tasks stats instead of method channel
         NotificationService.getNotifications(limit: 5),
         call_service.CallLogService.getCallLogs(limit: 5),
       ]);
@@ -587,20 +628,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
                   const EdgeInsets.only(left: 16, bottom: 16, top: 32),
             ),
             actions: [
-              SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(1.0, 0),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: _dashboardController,
-                    curve: const Interval(0.3, 0.8, curve: Curves.easeOut),
-                  ),
-                ),
-                child: IconButton(
-                  onPressed: _showSearch,
-                  icon: const Icon(Icons.search),
-                ),
+              // Firebase Export Test Button (Debug/Testing)
+              IconButton(
+                onPressed: _testFirebaseExport,
+                icon: const Icon(Icons.cloud_upload),
+                tooltip: 'Test Firebase Export',
               ),
               SlideTransition(
                 position: Tween<Offset>(
@@ -830,26 +862,22 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
           ),
 
           // Recent Summaries List with staggered animation
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final item = _recentSummaries[index];
-                return SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 1.0),
-                    end: Offset.zero,
-                  ).animate(
-                    CurvedAnimation(
-                      parent: _cardController,
-                      curve: Interval(
-                        0.7 + (index * 0.1).clamp(0.0, 0.9),
-                        1.0,
-                        curve: Curves.easeOut,
-                      ),
-                    ),
-                  ),
-                  child: FadeTransition(
-                    opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+          if (_isLoading)
+            const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final item = _recentSummaries[index];
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 1.0),
+                      end: Offset.zero,
+                    ).animate(
                       CurvedAnimation(
                         parent: _cardController,
                         curve: Interval(
@@ -859,22 +887,33 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
                         ),
                       ),
                     ),
-                    child: SummaryCard(
-                      title: item.title,
-                      summary: item.summary,
-                      subtitle: item.subtitle,
-                      leadingIcon: item.type == SummaryType.call
-                          ? Icons.phone
-                          : Icons.notifications,
-                      accentColor: _getPriorityColor(item.priority),
-                      onTap: () => _openSummaryDetail(item),
+                    child: FadeTransition(
+                      opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                        CurvedAnimation(
+                          parent: _cardController,
+                          curve: Interval(
+                            0.7 + (index * 0.1).clamp(0.0, 0.9),
+                            1.0,
+                            curve: Curves.easeOut,
+                          ),
+                        ),
+                      ),
+                      child: SummaryCard(
+                        title: item.title,
+                        summary: item.summary,
+                        subtitle: item.subtitle,
+                        leadingIcon: item.type == SummaryType.call
+                            ? Icons.phone
+                            : Icons.notifications,
+                        accentColor: _getPriorityColor(item.priority),
+                        onTap: () => _openSummaryDetail(item),
+                      ),
                     ),
-                  ),
-                );
-              },
-              childCount: _recentSummaries.length,
+                  );
+                },
+                childCount: _recentSummaries.length,
+              ),
             ),
-          ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 16)),
         ],
@@ -1001,23 +1040,123 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
     }
   }
 
-  void _showSearch() {
-    showSearch(context: context, delegate: SummarySearchDelegate());
-  }
-
   void _showNotifications() {
     Navigator.pushNamed(context, '/notifications');
   }
 
   void _viewAllSummaries() {
-    Navigator.pushNamed(context, '/all-summaries');
+    if (_recentSummaries.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No summaries available yet'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+        ),
+      );
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      '/all-summaries',
+      arguments: List<SummaryItem>.from(_recentSummaries),
+    );
   }
 
   void _openSummaryDetail(SummaryItem item) {
     if (item.type == SummaryType.call) {
       Navigator.pushNamed(context, '/call-detail', arguments: item);
     } else {
+      // All notifications (including payment/banking apps) go to notification detail screen
       Navigator.pushNamed(context, '/notification-detail', arguments: item);
+    }
+  }
+
+  /// Manual Firebase Backup
+  void _testFirebaseExport() async {
+    print('🧪 Starting manual backup...');
+    try {
+      print('🔄 Backing up user data to Firebase...');
+      // Initialize if needed, then export data
+      if (!FirebaseExportCoordinator.isInitialized) {
+        await FirebaseExportCoordinator.initialize();
+      }
+      await FirebaseExportCoordinator.exportAllData();
+      print('✅ Manual backup completed successfully!');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Backup complete')),
+        );
+      }
+    } catch (e) {
+      print('❌ Manual backup failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Backup failed: $e')),
+        );
+      }
+    }
+  }
+
+  /// Get Google Tasks statistics for dashboard
+  Future<Map<String, int>> _getGoogleTaskStats() async {
+    try {
+      // Initialize Google Tasks service
+      final tasksService = google_tasks.TasksService();
+      await tasksService.initialize();
+
+      // Get Google tasks
+      final googleTaskItems = await tasksService.getAllTasks();
+
+      if (googleTaskItems.isNotEmpty) {
+        final now = DateTime.now();
+
+        // Calculate stats directly from TaskItem objects
+        int totalTasks = googleTaskItems.length;
+        int completedTasks =
+            googleTaskItems.where((task) => task.isCompleted).length;
+        int pendingTasks =
+            googleTaskItems.where((task) => !task.isCompleted).length;
+        int overdueTasks = 0;
+        int todayTasks = 0;
+
+        // Count overdue and today's tasks
+        for (final task in googleTaskItems) {
+          if (task.dueDate != null) {
+            final dueDate = task.dueDate!;
+            if (!task.isCompleted && dueDate.isBefore(now)) {
+              overdueTasks++;
+            }
+            if (dueDate.year == now.year &&
+                dueDate.month == now.month &&
+                dueDate.day == now.day) {
+              todayTasks++;
+            }
+          }
+        }
+
+        final stats = {
+          'totalTasks': totalTasks,
+          'completedTasks': completedTasks,
+          'pendingTasks': pendingTasks,
+          'overdueTasks': overdueTasks,
+          'todayTasks': todayTasks,
+        };
+
+        print('📊 Dashboard Task Stats (from Google Tasks): $stats');
+        print(
+            '📝 Google Tasks breakdown: ${googleTaskItems.length} tasks found');
+        return stats;
+      } else {
+        // Fallback to method channel if no Google Tasks
+        print('📊 Dashboard: No Google Tasks found, using fallback');
+        return await TaskService.getTaskStats();
+      }
+    } catch (e) {
+      print('❌ Error getting Google Tasks stats for dashboard: $e');
+      // Fallback to method channel
+      return await TaskService.getTaskStats();
     }
   }
 }
@@ -1079,6 +1218,44 @@ class _CallsTabState extends State<CallsTab> {
     }
   }
 
+  Future<void> _launchDialer(String phoneNumber) async {
+    final sanitizedNumber =
+        phoneNumber.replaceAll(RegExp(r'[^0-9+#*pwPW]'), '');
+
+    if (sanitizedNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Phone number is unavailable for this contact'),
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri(scheme: 'tel', path: sanitizedNumber);
+
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open the dialer'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to launch the dialer'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(
@@ -1091,10 +1268,6 @@ class _CallsTabState extends State<CallsTab> {
           snap: true,
           title: const Text('Call History'),
           actions: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.search),
-            ),
             IconButton(
               onPressed: _loadCallLogs,
               icon: const Icon(Icons.refresh),
@@ -1212,6 +1385,7 @@ class _CallsTabState extends State<CallsTab> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
+        onTap: () => _launchDialer(callLog.phoneNumber),
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           // Only use NetworkImage for http/https URLs. content:// or file:// URIs are not supported by NetworkImage
@@ -1282,7 +1456,7 @@ class _CallsTabState extends State<CallsTab> {
               iconSize: 20,
             ),
             IconButton(
-              onPressed: () {},
+              onPressed: () => _launchDialer(callLog.phoneNumber),
               icon: Icon(
                 Icons.phone,
                 size: 18,
@@ -1546,12 +1720,15 @@ class _NotificationsTabState extends State<NotificationsTab> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Text(
-                  notification.appName,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
+                Expanded(
+                  child: Text(
+                    notification.appName,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1600,6 +1777,9 @@ class _NotificationsTabState extends State<NotificationsTab> {
               }
             });
           }
+          // Navigate to notification detail page
+          Navigator.pushNamed(context, '/notification-detail',
+              arguments: notification);
         },
       ),
     );
@@ -1649,19 +1829,344 @@ class _TasksTabState extends State<TasksTab> {
       final futures = await Future.wait([
         TaskService.getTasks(),
         TaskService.getTaskStats(),
+        _loadGoogleTasks(),
       ]);
 
+      final localTasks = futures[0] as List<dynamic>;
+      final androidStats = futures[1] as Map<String, int>;
+      final googleTasks = futures[2] as List<Task>;
+
+      // Convert local tasks to the correct Task model type
+      final allLocalTasks = localTasks.whereType<Task>().toList();
+
+      // Combine local and Google tasks for display
+      final allTasks = <Task>[...allLocalTasks, ...googleTasks];
+
+      Map<String, int> combinedStats;
+
+      if (googleTasks.isNotEmpty) {
+        // Prioritize Google Tasks for statistics when available
+        final now = DateTime.now();
+        combinedStats = {
+          'totalTasks': googleTasks.length,
+          'completedTasks': googleTasks.where((task) => task.completed).length,
+          'pendingTasks': googleTasks
+              .where((task) =>
+                  !task.completed &&
+                  (task.dueDate == null || !task.dueDate!.isBefore(now)))
+              .length,
+          'overdueTasks': googleTasks
+              .where((task) =>
+                  !task.completed &&
+                  task.dueDate != null &&
+                  task.dueDate!.isBefore(now))
+              .length,
+          'todayTasks': googleTasks
+              .where((task) =>
+                  task.dueDate != null &&
+                  task.dueDate!.year == now.year &&
+                  task.dueDate!.month == now.month &&
+                  task.dueDate!.day == now.day)
+              .length,
+        };
+        print('📊 Task Stats (from Google Tasks): $combinedStats');
+        print('📝 Google Tasks details:');
+        for (final task in googleTasks) {
+          print(
+              '   - ${task.title}: completed=${task.completed}, due=${task.dueDate}');
+        }
+      } else if (allLocalTasks.isNotEmpty) {
+        // Use local tasks if Google Tasks are not available
+        final now = DateTime.now();
+        combinedStats = {
+          'totalTasks': allLocalTasks.length,
+          'completedTasks':
+              allLocalTasks.where((task) => task.completed).length,
+          'pendingTasks': allLocalTasks
+              .where((task) =>
+                  !task.completed &&
+                  (task.dueDate == null || !task.dueDate!.isBefore(now)))
+              .length,
+          'overdueTasks': allLocalTasks
+              .where((task) =>
+                  !task.completed &&
+                  task.dueDate != null &&
+                  task.dueDate!.isBefore(now))
+              .length,
+          'todayTasks': allLocalTasks
+              .where((task) =>
+                  task.dueDate != null &&
+                  task.dueDate!.year == now.year &&
+                  task.dueDate!.month == now.month &&
+                  task.dueDate!.day == now.day)
+              .length,
+        };
+        print('📊 Task Stats (from local tasks): $combinedStats');
+      } else {
+        // Fall back to Android method channel stats when no tasks are loaded
+        combinedStats = androidStats;
+        print('📊 Task Stats (from Android fallback): $combinedStats');
+      }
       setState(() {
-        _tasks = futures[0] as List<Task>;
-        _taskStats = futures[1] as Map<String, int>;
+        _tasks = allTasks;
+        _taskStats = combinedStats;
         _isLoading = false;
       });
     } catch (e) {
       print('Error loading tasks: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      // Try to get Android stats as fallback
+      try {
+        final fallbackStats = await TaskService.getTaskStats();
+        setState(() {
+          _taskStats = fallbackStats;
+          _isLoading = false;
+        });
+        print('📊 Task Stats (error fallback): $fallbackStats');
+      } catch (fallbackError) {
+        print('Error getting fallback stats: $fallbackError');
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  Future<void> refreshTasks() async => _loadTasks();
+
+  Future<void> showTaskDialog({Task? task}) async {
+    final isEditing = task != null;
+
+    Task? editingTask;
+    if (task != null) {
+      editingTask = task;
+      if (!editingTask.taskId.startsWith('google_')) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Editing local tasks isn't supported yet."),
+          ),
+        );
+        return;
+      }
+    }
+
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController(text: task?.title ?? '');
+    final descriptionController =
+        TextEditingController(text: task?.description ?? '');
+    DateTime? selectedDueDate = task?.dueDate;
+
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: Text(isEditing ? 'Edit Task' : 'Add Task'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: titleController,
+                      decoration: const InputDecoration(labelText: 'Title'),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a task title';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: descriptionController,
+                      decoration:
+                          const InputDecoration(labelText: 'Description'),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            selectedDueDate != null
+                                ? 'Due: ${DateFormat('MMM d, yyyy').format(selectedDueDate!)}'
+                                : 'No due date',
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: dialogContext,
+                              initialDate: selectedDueDate ?? DateTime.now(),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                selectedDueDate = picked;
+                              });
+                            }
+                          },
+                          child: const Text('Pick Date'),
+                        ),
+                        if (selectedDueDate != null)
+                          TextButton(
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedDueDate = null;
+                              });
+                            },
+                            child: const Text('Clear'),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (formKey.currentState?.validate() ?? false) {
+                      Navigator.of(dialogContext).pop(true);
+                    }
+                  },
+                  child: Text(isEditing ? 'Save' : 'Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    final trimmedTitle = titleController.text.trim();
+    final trimmedDescription = descriptionController.text.trim();
+    titleController.dispose();
+    descriptionController.dispose();
+
+    if (shouldSave == true) {
+      final tasksService = google_tasks.TasksService();
+      await tasksService.initialize();
+
+      bool success = false;
+
+      if (editingTask != null) {
+        final listId = editingTask.metadata['taskListId'] as String?;
+        final googleTaskId = editingTask.metadata['googleTaskId'] as String?;
+
+        if (listId == null || googleTaskId == null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Missing Google task metadata.'),
+            ),
+          );
+          return;
+        }
+
+        success = await tasksService.updateTask(
+          taskListId: listId,
+          taskId: googleTaskId,
+          title: trimmedTitle,
+          description: trimmedDescription.isEmpty ? null : trimmedDescription,
+          dueDate: selectedDueDate,
+        );
+      } else {
+        final createdId = await tasksService.createTask(
+          title: trimmedTitle,
+          description: trimmedDescription.isEmpty ? null : trimmedDescription,
+          dueDate: selectedDueDate,
+        );
+        success = createdId != null;
+      }
+
+      if (!mounted) return;
+
+      if (success) {
+        await _loadTasks();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isEditing
+                  ? 'Task updated in Google Tasks'
+                  : 'Task created in Google Tasks',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isEditing
+                  ? 'Failed to update Google Task'
+                  : 'Failed to create Google Task',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<List<Task>> _loadGoogleTasks() async {
+    try {
+      // Initialize Google Tasks service
+      final tasksService = google_tasks.TasksService();
+      await tasksService.initialize();
+
+      // Debug: List all tasks with their IDs
+      await tasksService.debugListAllTasksWithIds();
+
+      // Get Google tasks
+      final googleTaskItems = await tasksService.getAllTasks();
+
+      // Convert TaskItem objects to Task objects
+      final convertedTasks = googleTaskItems
+          .map((taskItem) => _convertTaskItemToTask(taskItem))
+          .toList();
+
+      print("🔄 Converted ${convertedTasks.length} Google tasks");
+      for (final task in convertedTasks) {
+        print("   📝 Converted task: '${task.title}' -> ID: ${task.taskId}");
+        print("       Metadata: ${task.metadata}");
+      }
+
+      return convertedTasks;
+    } catch (e) {
+      print('Error loading Google tasks: $e');
+      return [];
+    }
+  }
+
+  Task _convertTaskItemToTask(google_tasks.TaskItem taskItem) {
+    return Task(
+      taskId: 'google_${taskItem.id}',
+      title: taskItem.title,
+      description: taskItem.description,
+      dueDate: taskItem.dueDate,
+      completed: taskItem.isCompleted,
+      source:
+          TaskSource.ai_generated, // Using existing enum value for Google tasks
+      sourceRef: taskItem.id,
+      priority: TaskPriority
+          .medium, // Google Tasks don't have priority, default to medium
+      category: 'Google Tasks',
+      createdAt:
+          DateTime.now(), // Google API doesn't provide creation date directly
+      completedAt: taskItem.completedDate,
+      tags: [taskItem.taskListName], // Use task list name as tag
+      assignedTo: null,
+      metadata: {
+        'taskListId': taskItem.taskListId,
+        'taskListName': taskItem.taskListName,
+        'googleTaskId': taskItem.id,
+      },
+    );
   }
 
   List<Task> get _filteredTasks {
@@ -1694,189 +2199,209 @@ class _TasksTabState extends State<TasksTab> {
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          foregroundColor: Theme.of(context).colorScheme.onSurface,
-          elevation: 0,
-          floating: true,
-          snap: true,
-          title: const Text('Tasks'),
-          actions: [
-            IconButton(
-              onPressed: () async {
-                // Sign in to Google for Tasks integration
-                final success = await TaskService.signInToGoogle();
-                if (success) {
-                  _loadTasks();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Connected to Google Tasks')),
-                  );
-                }
-              },
-              icon: const Icon(Icons.cloud_sync),
-            ),
-            IconButton(
-              onPressed: _loadTasks,
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.task_alt,
-                          size: 24,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Task Overview',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildProgressItem(
-                              context,
-                              'Completed',
-                              _taskStats['completedTasks']?.toString() ?? '0',
-                              Colors.green),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildProgressItem(
-                              context,
-                              'Pending',
-                              _taskStats['pendingTasks']?.toString() ?? '0',
-                              Colors.orange),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildProgressItem(
-                              context,
-                              'Overdue',
-                              _taskStats['overdueTasks']?.toString() ?? '0',
-                              Colors.red),
-                        ),
-                      ],
-                    ),
-                  ],
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+            elevation: 0,
+            floating: true,
+            snap: true,
+            title: const Text('Tasks'),
+            actions: [
+              IconButton(
+                onPressed: () async {
+                  // Sign in to Google for Tasks integration
+                  final success = await TaskService.signInToGoogle();
+                  if (success) {
+                    _loadTasks();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Connected to Google Tasks')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.cloud_sync),
+              ),
+              IconButton(
+                onPressed: _loadTasks,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.task_alt,
+                            size: 24,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Task Overview',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildProgressItem(
+                                context,
+                                'Completed',
+                                _taskStats['completedTasks']?.toString() ?? '0',
+                                Colors.green),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildProgressItem(
+                                context,
+                                'Pending',
+                                _taskStats['pendingTasks']?.toString() ?? '0',
+                                Colors.orange),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildProgressItem(
+                                context,
+                                'Overdue',
+                                _taskStats['overdueTasks']?.toString() ?? '0',
+                                Colors.red),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    onPressed: () {
-                      setState(() {
-                        _selectedFilter = 'today';
-                      });
-                    },
-                    icon: const Icon(Icons.today),
-                    label: const Text('Today'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _selectedFilter == 'today'
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.surfaceVariant,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _selectedFilter = 'upcoming';
-                      });
-                    },
-                    icon: const Icon(Icons.schedule),
-                    label: const Text('Upcoming'),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: _selectedFilter == 'upcoming'
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : null,
-                      foregroundColor: _selectedFilter == 'upcoming'
-                          ? Theme.of(context).colorScheme.onPrimaryContainer
-                          : null,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-        if (_isLoading)
-          const SliverFillRemaining(
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_filteredTasks.isEmpty)
-          SliverFillRemaining(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
                 children: [
-                  Icon(
-                    Icons.task_alt,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () {
+                        setState(() {
+                          _selectedFilter = 'today';
+                        });
+                      },
+                      icon: const Icon(Icons.today),
+                      label: const Text('Today'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _selectedFilter == 'today'
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.surfaceVariant,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _selectedFilter == 'today'
-                        ? 'No tasks for today'
-                        : _selectedFilter == 'upcoming'
-                            ? 'No upcoming tasks'
-                            : _selectedFilter == 'completed'
-                                ? 'No completed tasks'
-                                : 'No overdue tasks',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sign in to Google to sync your tasks',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _selectedFilter = 'upcoming';
+                        });
+                      },
+                      icon: const Icon(Icons.schedule),
+                      label: const Text('Upcoming'),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: _selectedFilter == 'upcoming'
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : null,
+                        foregroundColor: _selectedFilter == 'upcoming'
+                            ? Theme.of(context).colorScheme.onPrimaryContainer
+                            : null,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          )
-        else
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) =>
-                  _buildTaskItem(context, _filteredTasks[index]),
-              childCount: _filteredTasks.length,
-            ),
           ),
-      ],
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+          if (_isLoading)
+            const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_filteredTasks.isEmpty)
+            SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Lottie animation
+                    SizedBox(
+                      width: 180,
+                      height: 180,
+                      child: Lottie.asset(
+                        'assets/animations/relax.json',
+                        fit: BoxFit.contain,
+                        repeat: true,
+                        animate: true,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      _selectedFilter == 'today'
+                          ? 'No tasks for today'
+                          : _selectedFilter == 'upcoming'
+                              ? 'No upcoming tasks'
+                              : _selectedFilter == 'completed'
+                                  ? 'No completed tasks'
+                                  : 'No overdue tasks',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sign in to Google to sync your tasks',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) =>
+                    _buildTaskItem(context, _filteredTasks[index]),
+                childCount: _filteredTasks.length,
+              ),
+            ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => showTaskDialog(),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        icon: const Icon(Icons.add_task),
+        label: const Text('Add Task'),
+      ),
     );
   }
 
@@ -1904,6 +2429,9 @@ class _TasksTabState extends State<TasksTab> {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1919,7 +2447,7 @@ class _TasksTabState extends State<TasksTab> {
       case TaskPriority.high:
         priorityColor = Colors.orange;
         break;
-      case TaskPriority.normal:
+      case TaskPriority.medium:
         priorityColor = Colors.green;
         break;
       case TaskPriority.low:
@@ -1931,99 +2459,209 @@ class _TasksTabState extends State<TasksTab> {
         task.dueDate!.isBefore(DateTime.now()) &&
         !task.completed;
 
-    return Card(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Checkbox(
-          value: task.completed,
-          onChanged: (value) async {
-            try {
-              final updatedTask = task.copyWith(completed: value ?? false);
-              await TaskService.updateTask(updatedTask);
-              _loadTasks();
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error updating task: $e')),
-              );
-            }
-          },
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-        title: Text(
-          task.title,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            decoration: task.completed ? TextDecoration.lineThrough : null,
-            color: task.completed
-                ? Theme.of(context).colorScheme.onSurfaceVariant
-                : Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (task.description != null && task.description!.isNotEmpty)
-              Text(
-                task.description!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+      child: Card(
+        elevation: task.completed ? 1 : 3,
+        color: task.completed
+            ? Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6)
+            : Theme.of(context).colorScheme.surface,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 200),
+          scale: task.completed ? 0.97 : 1.0,
+          child: ListTile(
+            leading: AnimatedScale(
+              duration: const Duration(milliseconds: 150),
+              scale: task.completed ? 1.1 : 1.0,
+              child: Checkbox(
+                value: task.completed,
+                onChanged: (value) async {
+                  try {
+                    if (task.taskId.startsWith('google_')) {
+                      print("🔍 Processing Google task: ${task.title}");
+                      print("   Task ID: ${task.taskId}");
+                      print("   Metadata: ${task.metadata}");
+
+                      final listId = task.metadata['taskListId'] as String?;
+                      final googleTaskId =
+                          task.metadata['googleTaskId'] as String?;
+
+                      print("   Extracted List ID: $listId");
+                      print("   Extracted Google Task ID: $googleTaskId");
+
+                      if (listId == null || googleTaskId == null) {
+                        print("❌ Missing task identifiers!");
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Missing Google task identifiers.'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final tasksService = google_tasks.TasksService();
+                      await tasksService.initialize();
+
+                      final shouldComplete = value ?? false;
+                      final success = shouldComplete
+                          ? await tasksService.markTaskCompleted(
+                              listId, googleTaskId)
+                          : await tasksService.markTaskNeedsAction(
+                              listId, googleTaskId);
+
+                      if (!success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              shouldComplete
+                                  ? 'Failed to mark task as completed.'
+                                  : 'Failed to move task back to pending state.',
+                            ),
+                          ),
+                        );
+                      }
+                    } else {
+                      // Handle local task update - need to convert back to TaskService Task
+                      // For now, skip updating to avoid type conflicts
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Updating local tasks isn't supported yet.",
+                            ),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+
+                    await _loadTasks();
+
+                    // Show completion celebration for completed tasks
+                    if (value == true && mounted) {
+                      _showTaskCompletionAnimation(context, task.title);
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error updating task: $e')),
+                      );
+                    }
+                  }
+                },
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
-            const SizedBox(height: 4),
-            Row(
+            ),
+            title: Text(
+              task.title,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                decoration: task.completed ? TextDecoration.lineThrough : null,
+                color: task.completed
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: priorityColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    task.priority.name.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: priorityColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (task.dueDate != null) ...[
-                  Icon(
-                    isOverdue ? Icons.warning : Icons.schedule,
-                    size: 12,
-                    color: isOverdue
-                        ? Colors.red
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
+                if (task.description.isNotEmpty)
                   Text(
-                    isOverdue ? 'Overdue' : _formatDueDate(task.dueDate!),
+                    task.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: isOverdue
-                          ? Colors.red
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 12,
-                      fontWeight:
-                          isOverdue ? FontWeight.w600 : FontWeight.normal,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
-                ],
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: priorityColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        task.priority.name.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: priorityColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (task.dueDate != null) ...[
+                      Icon(
+                        isOverdue ? Icons.warning : Icons.schedule,
+                        size: 12,
+                        color: isOverdue
+                            ? Colors.red
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isOverdue ? 'Overdue' : _formatDueDate(task.dueDate!),
+                        style: TextStyle(
+                          color: isOverdue
+                              ? Colors.red
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                          fontWeight:
+                              isOverdue ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
+            ),
+            trailing: IconButton(
+              onPressed: () {
+                _showTaskOptions(context, task);
+              },
+              icon: const Icon(Icons.more_vert),
+              iconSize: 20,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showTaskCompletionAnimation(BuildContext context, String taskTitle) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(
+              Icons.check_circle,
+              color: Colors.green,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '✓ "$taskTitle" completed!',
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
             ),
           ],
         ),
-        trailing: IconButton(
-          onPressed: () {
-            _showTaskOptions(context, task);
-          },
-          icon: const Icon(Icons.more_vert),
-          iconSize: 20,
+        backgroundColor: Colors.green.shade50,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );
@@ -2060,25 +2698,63 @@ class _TasksTabState extends State<TasksTab> {
               title: const Text('Edit Task'),
               onTap: () {
                 Navigator.pop(context);
-                // Navigate to edit task screen
+                Future.microtask(() => showTaskDialog(task: task));
               },
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete Task',
-                  style: TextStyle(color: Colors.red)),
+              title: const Text(
+                'Delete Task',
+                style: TextStyle(color: Colors.red),
+              ),
               onTap: () async {
                 Navigator.pop(context);
                 try {
-                  await TaskService.deleteTask(task.id);
-                  _loadTasks();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Task deleted')),
-                  );
+                  if (task.taskId.startsWith('google_')) {
+                    final listId = task.metadata['taskListId'] as String?;
+                    final googleTaskId =
+                        task.metadata['googleTaskId'] as String?;
+
+                    if (listId == null || googleTaskId == null) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Missing Google task identifiers.'),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+
+                    final tasksService = google_tasks.TasksService();
+                    await tasksService.initialize();
+                    final success =
+                        await tasksService.deleteTask(listId, googleTaskId);
+
+                    if (!success && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Failed to delete Google task.'),
+                        ),
+                      );
+                      return;
+                    }
+                  } else {
+                    await TaskService.deleteTask(task.taskId);
+                  }
+
+                  await _loadTasks();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Task deleted')),
+                    );
+                  }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error deleting task: $e')),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error deleting task: $e')),
+                    );
+                  }
                 }
               },
             ),

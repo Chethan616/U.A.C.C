@@ -3,6 +3,7 @@ package com.example.uacc
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.IBinder
@@ -59,15 +60,57 @@ class LiveActivityService : Service() {
         
         // Start as foreground service with initial notification
         try {
-            startForeground(ONGOING_NOTIFICATION_ID, createInitialNotification())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(ONGOING_NOTIFICATION_ID, createInitialNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL)
+            } else {
+                startForeground(ONGOING_NOTIFICATION_ID, createInitialNotification())
+            }
         } catch (e: SecurityException) {
             Log.e(TAG, "Failed to start foreground service - missing permissions", e)
-            stopSelf()
+            // Try without foreground service type
+            try {
+                startForeground(ONGOING_NOTIFICATION_ID, createInitialNotification())
+            } catch (e2: Exception) {
+                Log.e(TAG, "Failed to start any foreground service", e2)
+                stopSelf()
+            }
         }
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "LiveActivityService started")
+        
+        // Handle call state change action
+        intent?.getStringExtra("action")?.let { action ->
+            when (action) {
+                "callStateChanged" -> {
+                    val state = intent.getStringExtra("state")
+                    if (state != null) {
+                        onCallStateChanged(state)
+                    }
+                }
+            }
+        }
+        
+        val isBackgroundStart = intent?.getBooleanExtra("background_start", false) ?: false
+        
+        if (isBackgroundStart) {
+            // Started in background mode due to foreground service restrictions
+            Log.d(TAG, "Service started in background mode")
+            // Don't start as foreground service, just run normally
+        } else {
+            // Try to start as foreground service if not already started
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(ONGOING_NOTIFICATION_ID, createInitialNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL)
+                } else {
+                    startForeground(ONGOING_NOTIFICATION_ID, createInitialNotification())
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not start as foreground service, continuing in background", e)
+            }
+        }
+        
         return START_STICKY
     }
     
@@ -81,6 +124,24 @@ class LiveActivityService : Service() {
         
         // Remove ongoing notification
         notificationManager?.cancel(ONGOING_NOTIFICATION_ID)
+    }
+    
+    /**
+     * Handle call state changes to reconfigure audio when needed
+     */
+    fun onCallStateChanged(state: String) {
+        try {
+            Log.d(TAG, "Call state changed: $state")
+            
+            speechRecognitionManager?.let { manager ->
+                // Reconfigure audio for new call state
+                manager.reconfigureAudio()
+                
+                Log.d(TAG, "Audio reconfigured - Status: ${manager.getAudioStatus()}")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling call state change", e)
+        }
     }
     
     override fun onBind(intent: Intent?): IBinder? = null
@@ -178,19 +239,71 @@ class LiveActivityService : Service() {
     }
     
     private fun startTranscription() {
-        speechRecognitionManager?.startListening { transcript ->
-            currentTranscript = transcript
-            updateTranscriptionNotification(transcript)
+        try {
+            Log.d(TAG, "Starting call transcription")
             
-            // Send to Flutter
-            LiveActivityChannel.sendTranscriptUpdate(transcript)
+            speechRecognitionManager?.let { manager ->
+                // Log audio status before starting
+                Log.d(TAG, "Audio status: ${manager.getAudioStatus()}")
+                
+                manager.startListening { transcript, isPartial ->
+                    if (transcript.isBlank()) {
+                        Log.d(TAG, "Ignoring blank transcript update from listener")
+                        return@startListening
+                    }
+
+                    if (isPartial) {
+                        val displayText = buildString {
+                            if (currentTranscript.isNotBlank()) {
+                                append(currentTranscript.trim())
+                                append(" ")
+                            }
+                            append(transcript)
+                        }
+
+                        updateTranscriptionNotification(displayText)
+                        LiveActivityChannel.sendTranscriptUpdate(displayText)
+                        sendTranscriptToIsland(transcript, isFinal = false)
+                    } else {
+                        if (currentTranscript.isNotBlank()) {
+                            currentTranscript = currentTranscript.trimEnd() + " " + transcript
+                        } else {
+                            currentTranscript = transcript
+                        }
+
+                        updateTranscriptionNotification(currentTranscript)
+                        LiveActivityChannel.sendTranscriptUpdate(currentTranscript)
+                        sendTranscriptToIsland(transcript, isFinal = true)
+                    }
+                }
+                
+                Log.d(TAG, "Call transcription started successfully")
+            } ?: run {
+                Log.e(TAG, "Speech recognition manager not available")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start call transcription", e)
+            LiveActivityChannel.sendError("TRANSCRIPTION_ERROR", "Failed to start transcription", e.message)
         }
     }
     
     private fun stopTranscription() {
-        speechRecognitionManager?.stopListening()
-        currentTranscript = ""
-        LiveActivityChannel.sendTranscriptUpdate("")
+        try {
+            Log.d(TAG, "Stopping call transcription")
+            
+            speechRecognitionManager?.stopListening()
+            currentTranscript = ""
+            
+            // Clear transcript in Flutter and Dynamic Island
+            LiveActivityChannel.sendTranscriptUpdate("")
+            
+            // Send final message to Dynamic Island
+            sendTranscriptToIsland("", isFinal = true)
+            
+            Log.d(TAG, "Call transcription stopped")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping transcription", e)
+        }
     }
     
     private fun updateTranscriptionNotification(transcript: String) {
@@ -205,6 +318,26 @@ class LiveActivityService : Service() {
             text = displayText,
             isOngoing = true
         )
+    }
+    
+    private fun sendTranscriptToIsland(transcript: String, isFinal: Boolean = false) {
+        try {
+            val intent = Intent(this, com.example.uacc.dynamicisland.service.IslandOverlayService::class.java)
+            
+            if (transcript.isNotEmpty()) {
+                intent.putExtra("action", "addTranscriptMessage")
+                intent.putExtra("text", transcript)
+                intent.putExtra("speakerType", "OUTGOING") // Assume outgoing for now
+                intent.putExtra("isPartial", !isFinal)
+            } else if (isFinal) {
+                intent.putExtra("action", "stopTranscript")
+            }
+            
+            startService(intent)
+            Log.d(TAG, "Sent transcript to Dynamic Island: ${transcript.take(50)}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send transcript to Dynamic Island", e)
+        }
     }
     
     private fun updateNotification(title: String, text: String, isOngoing: Boolean) {

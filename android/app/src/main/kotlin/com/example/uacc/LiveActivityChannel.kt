@@ -16,7 +16,7 @@ object LiveActivityChannel {
     private const val NOTIFICATION_CHANNEL = "com.example.uacc/notifications"
     private const val TASK_CHANNEL = "com.example.uacc/tasks"
     private const val CALENDAR_CHANNEL = "com.example.uacc/calendar"
-    private const val TAG = "LiveActivityChannel"
+    private const val TAG = "CallStateChannel"
     
     private var liveActivityMethodChannel: MethodChannel? = null
     private var callLogMethodChannel: MethodChannel? = null
@@ -89,30 +89,6 @@ object LiveActivityChannel {
     
     private fun handleLiveActivityCall(call: MethodCall, result: MethodChannel.Result, context: Context) {
         when (call.method) {
-            "startLiveActivity" -> {
-                try {
-                    LiveActivityService.startService(context)
-                    result.success(true)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to start live activity service", e)
-                    result.error("SERVICE_ERROR", "Failed to start live activity service", e.message)
-                }
-            }
-            
-            "stopLiveActivity" -> {
-                try {
-                    LiveActivityService.stopService(context)
-                    result.success(true)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to stop live activity service", e)
-                    result.error("SERVICE_ERROR", "Failed to stop live activity service", e.message)
-                }
-            }
-            
-            "isLiveActivityRunning" -> {
-                result.success(true) // TODO: Implement actual check
-            }
-            
             else -> {
                 result.notImplemented()
             }

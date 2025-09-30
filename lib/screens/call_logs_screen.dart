@@ -196,6 +196,18 @@ class _CallLogsScreenState extends ConsumerState<CallLogsScreen> {
   void _makeCall(String phoneNumber) async {
     try {
       HapticFeedback.lightImpact();
+
+      if (phoneNumber.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Phone number is unavailable for this contact'),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+
+      // Use method channel to make actual call
+      await CallLogService.makeCall(phoneNumber);
+
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Calling $phoneNumber...'),
           backgroundColor: const Color(0xFF6C63FF)));
@@ -209,7 +221,13 @@ class _CallLogsScreenState extends ConsumerState<CallLogsScreen> {
     showModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
-        builder: (_) => CallDetailsBottomSheet(callLog: log));
+        builder: (_) => CallDetailsBottomSheet(
+              callLog: log,
+              onCall: (phoneNumber) {
+                Navigator.pop(context);
+                _makeCall(phoneNumber);
+              },
+            ));
   }
 
   void _showSearchDialog() {
@@ -322,9 +340,13 @@ class _CallLogsScreenState extends ConsumerState<CallLogsScreen> {
 
 class CallDetailsBottomSheet extends StatelessWidget {
   final CallLog callLog;
+  final Function(String)? onCall;
 
-  const CallDetailsBottomSheet({Key? key, required this.callLog})
-      : super(key: key);
+  const CallDetailsBottomSheet({
+    Key? key,
+    required this.callLog,
+    this.onCall,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -373,7 +395,7 @@ class CallDetailsBottomSheet extends StatelessWidget {
           Row(children: [
             Expanded(
                 child: ElevatedButton.icon(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => onCall?.call(callLog.phoneNumber),
                     icon: const Icon(Icons.call),
                     label: const Text('Call'),
                     style: ElevatedButton.styleFrom(

@@ -49,11 +49,12 @@
     </LinearLayout>
 
     <!-- Recording Indicator -->
-    <View
+    <TextView
         android:id="@+id/recording_indicator"
-        android:layout_width="8dp"
-        android:layout_height="8dp"
-        android:background="@drawable/recording_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔴"
+        android:textSize="12sp"
         android:layout_marginStart="8dp" />
 
 </LinearLayout>

@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'theme/theme_provider.dart';
 import 'models/enums.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/modern_onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/call_detail_screen.dart';
@@ -14,12 +15,16 @@ import 'screens/notification_detail_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/call_logs_screen.dart';
 import 'screens/comprehensive_dashboard.dart';
+import 'screens/all_summaries_screen.dart';
 import 'screens/permission_request_screen.dart';
 import 'screens/register_screen.dart';
-import 'widgets/app_initializer.dart';
+import 'screens/splash_screen.dart';
 import 'screens/full_calendar_screen.dart';
 import 'utils/animated_routes.dart';
 import 'services/api_config_service.dart';
+import 'services/ai_analysis_service.dart' show TranscriptMessage;
+import 'services/background_notification_processor.dart';
+// Removed live activity screen import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +36,9 @@ void main() async {
 
   // Initialize API keys
   await ApiConfigService.initializeApiKeys();
+
+  // Initialize Background Notification Processor
+  await BackgroundNotificationProcessor.instance.initialize();
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -57,13 +65,13 @@ void main() async {
 
   runApp(
     ProviderScope(
-      child: const UACCApp(),
+      child: const CairoApp(),
     ),
   );
 }
 
-class UACCApp extends ConsumerWidget {
-  const UACCApp({Key? key}) : super(key: key);
+class CairoApp extends ConsumerWidget {
+  const CairoApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,15 +80,22 @@ class UACCApp extends ConsumerWidget {
     final theme = AppThemes.getTheme(currentTheme, systemBrightness);
 
     return MaterialApp(
-      title: 'UACC - Universal AI Call Companion',
+      title: 'Cairo - Universal AI Call Companion',
       theme: theme,
       debugShowCheckedModeBanner: false,
-      home: const AppInitializer(),
+      home: const SplashScreen(),
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/onboarding':
             return AnimatedRoutes.createRoute(
               const OnboardingScreen(),
+              type: TransitionType.fadeThrough,
+            );
+          case '/modern-onboarding':
+            final args = settings.arguments as Map<String, dynamic>? ?? {};
+            final isForNewUser = args['isForNewUser'] as bool? ?? true;
+            return AnimatedRoutes.createRoute(
+              ModernOnboardingScreen(isForNewUser: isForNewUser),
               type: TransitionType.fadeThrough,
             );
           case '/login':
@@ -103,6 +118,28 @@ class UACCApp extends ConsumerWidget {
           case '/notifications':
             return AnimatedRoutes.createRoute(
               const NotificationsScreen(),
+              type: TransitionType.sharedAxis,
+              axis: SharedAxisTransitionType.vertical,
+            );
+          case '/all-summaries':
+            final args = settings.arguments;
+            List<SummaryItem> summaries = <SummaryItem>[];
+
+            if (args is List<SummaryItem>) {
+              summaries = List<SummaryItem>.from(args);
+            } else if (args is List) {
+              summaries = args.whereType<SummaryItem>().toList();
+            } else if (args is Map) {
+              final potentialList = args['summaries'];
+              if (potentialList is List<SummaryItem>) {
+                summaries = List<SummaryItem>.from(potentialList);
+              } else if (potentialList is List) {
+                summaries = potentialList.whereType<SummaryItem>().toList();
+              }
+            }
+
+            return AnimatedRoutes.createRoute(
+              AllSummariesScreen(summaries: summaries),
               type: TransitionType.sharedAxis,
               axis: SharedAxisTransitionType.vertical,
             );
@@ -129,6 +166,7 @@ class UACCApp extends ConsumerWidget {
             );
           case '/full-calendar':
             return AnimatedRoutes.scaleFromCenter(const FullCalendarScreen());
+          // Removed live activity setup screen route
           case '/call-detail':
             final args = settings.arguments;
             Widget screen;
@@ -190,35 +228,63 @@ class UACCApp extends ConsumerWidget {
             Widget screen;
             if (args is NotificationData) {
               screen = NotificationDetailScreen(notificationData: args);
-            } else {
-              // Return dummy data for demo
+            } else if (args is SummaryItem) {
+              // Convert SummaryItem to NotificationData
+              final summaryItem = args;
+
+              // Extract app name from title (format: "AppName - Title")
+              final titleParts = summaryItem.title.split(' - ');
+              final appName = titleParts.isNotEmpty ? titleParts[0] : 'Unknown';
+              final actualTitle =
+                  titleParts.length > 1 ? titleParts[1] : summaryItem.title;
+
               screen = NotificationDetailScreen(
                 notificationData: NotificationData(
-                  id: 'demo_1',
-                  appName: 'GPay',
+                  id: 'summary_${DateTime.now().millisecondsSinceEpoch}',
+                  appName: appName,
                   appIcon: '',
-                  title: 'Payment Reminder',
-                  body: 'Your electricity bill of ₹2,450 is due tomorrow.',
-                  bigText: 'Pay now to avoid late charges. Due date: Tomorrow',
-                  category: 'Financial',
+                  title: actualTitle,
+                  body: summaryItem.summary,
+                  bigText: '',
+                  subText: '',
+                  category: _getCategoryFromAppName(appName),
                   timestamp:
-                      DateTime.now().subtract(const Duration(minutes: 30)),
+                      DateTime.now().subtract(const Duration(minutes: 10)),
+                  isRead: false,
+                  priority: summaryItem.priority,
+                  aiSummary: _generateAISummary(
+                      appName, actualTitle, summaryItem.summary),
+                  sentiment: 'Neutral',
+                  urgency: _mapPriorityToUrgency(summaryItem.priority),
+                  requiresAction:
+                      _determineActionRequired(appName, summaryItem.summary),
+                  containsPersonalInfo: _hasPersonalInfo(appName),
+                  suggestedActions:
+                      _generateSuggestedActions(appName, actualTitle),
+                  relatedNotifications: [],
+                ),
+              );
+            } else {
+              // Default fallback for unknown data types
+              screen = NotificationDetailScreen(
+                notificationData: NotificationData(
+                  id: 'fallback_1',
+                  appName: 'Notification',
+                  appIcon: '',
+                  title: 'Notification Details',
+                  body: 'This is a general notification.',
+                  bigText: '',
+                  subText: '',
+                  category: 'General',
+                  timestamp: DateTime.now(),
                   isRead: false,
                   priority: PriorityLevel.medium,
-                  aiSummary:
-                      'This is a payment reminder for an electricity bill that\'s due soon.',
+                  aiSummary: 'General notification received.',
                   sentiment: 'Neutral',
                   urgency: 'Medium',
-                  requiresAction: true,
-                  containsPersonalInfo: true,
-                  suggestedActions: [
-                    SuggestedAction(
-                      id: '1',
-                      title: 'Pay Bill Now',
-                      icon: Icons.payment,
-                      description: 'Open GPay to pay the electricity bill',
-                    ),
-                  ],
+                  requiresAction: false,
+                  containsPersonalInfo: false,
+                  suggestedActions: [],
                   relatedNotifications: [],
                 ),
               );
@@ -230,7 +296,7 @@ class UACCApp extends ConsumerWidget {
             );
           default:
             return MaterialPageRoute(
-              builder: (context) => const AppInitializer(),
+              builder: (context) => const SplashScreen(),
             );
         }
       },
@@ -243,5 +309,231 @@ class UACCApp extends ConsumerWidget {
         );
       },
     );
+  }
+
+  // Helper methods for SummaryItem to NotificationData conversion
+  String _getCategoryFromAppName(String appName) {
+    final appLower = appName.toLowerCase();
+
+    // Social Media Apps
+    if ([
+      'whatsapp',
+      'instagram',
+      'facebook',
+      'snapchat',
+      'telegram',
+      'signal',
+      'discord',
+      'twitter',
+      'linkedin',
+      'tiktok',
+      'reddit'
+    ].any((app) => appLower.contains(app))) {
+      return 'Social';
+    }
+
+    // Payment Apps
+    if ([
+      'gpay',
+      'google pay',
+      'phonepe',
+      'phone pe',
+      'paytm',
+      'bhim',
+      'upi',
+      'sbi',
+      'hdfc',
+      'icici',
+      'axis',
+      'kotak',
+      'bank',
+      'banking',
+      'payment'
+    ].any((app) => appLower.contains(app))) {
+      return 'Financial';
+    }
+
+    // Email Apps
+    if (['gmail', 'outlook', 'yahoo', 'email', 'mail']
+        .any((app) => appLower.contains(app))) {
+      return 'Productivity';
+    }
+
+    // Entertainment Apps
+    if (['youtube', 'netflix', 'spotify', 'music', 'video', 'gaming']
+        .any((app) => appLower.contains(app))) {
+      return 'Entertainment';
+    }
+
+    // Shopping Apps
+    if ([
+      'amazon',
+      'flipkart',
+      'shopping',
+      'myntra',
+      'swiggy',
+      'zomato',
+      'uber',
+      'ola'
+    ].any((app) => appLower.contains(app))) {
+      return 'Shopping';
+    }
+
+    return 'General';
+  }
+
+  String _generateAISummary(String appName, String title, String summary) {
+    final appLower = appName.toLowerCase();
+
+    if (['whatsapp', 'telegram', 'signal']
+        .any((app) => appLower.contains(app))) {
+      return '💬 Message received from $appName\n📱 Check for important communications\n🔔 Consider replying if urgent';
+    } else if (['instagram', 'facebook', 'snapchat']
+        .any((app) => appLower.contains(app))) {
+      return '📱 Social media notification from $appName\n👥 Check for interactions or updates\n⏰ Review when convenient';
+    } else if (['gpay', 'phonepe', 'paytm', 'bank']
+        .any((app) => appLower.contains(app))) {
+      return '💰 Financial notification from $appName\n💳 Review transaction details\n⚠️ Verify if legitimate';
+    } else if (['gmail', 'outlook', 'email']
+        .any((app) => appLower.contains(app))) {
+      return '📧 Email received\n📋 Check for important correspondence\n🔍 Review subject and sender';
+    }
+
+    return '🔔 Notification from $appName\n📄 $summary\n💡 Review when convenient';
+  }
+
+  String _mapPriorityToUrgency(PriorityLevel priority) {
+    switch (priority) {
+      case PriorityLevel.urgent:
+        return 'Critical';
+      case PriorityLevel.high:
+        return 'High';
+      case PriorityLevel.medium:
+        return 'Medium';
+      case PriorityLevel.low:
+        return 'Low';
+    }
+  }
+
+  bool _determineActionRequired(String appName, String summary) {
+    final appLower = appName.toLowerCase();
+    final summaryLower = summary.toLowerCase();
+
+    // Payment apps usually require action
+    if ([
+      'gpay',
+      'phonepe',
+      'paytm',
+      'bank',
+      'payment',
+      'bill',
+      'due'
+    ].any((word) => appLower.contains(word) || summaryLower.contains(word))) {
+      return true;
+    }
+
+    // Important keywords that suggest action is needed
+    if ([
+      'urgent',
+      'action required',
+      'due',
+      'expires',
+      'reminder',
+      'verify',
+      'confirm'
+    ].any((word) => summaryLower.contains(word))) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool _hasPersonalInfo(String appName) {
+    final appLower = appName.toLowerCase();
+
+    // Apps that typically contain personal information
+    if ([
+      'bank',
+      'gpay',
+      'phonepe',
+      'paytm',
+      'gmail',
+      'email',
+      'whatsapp',
+      'telegram',
+      'signal'
+    ].any((app) => appLower.contains(app))) {
+      return true;
+    }
+
+    return false;
+  }
+
+  List<SuggestedAction> _generateSuggestedActions(
+      String appName, String title) {
+    final appLower = appName.toLowerCase();
+    List<SuggestedAction> actions = [];
+
+    // Social Media Actions
+    if (['whatsapp', 'telegram', 'signal']
+        .any((app) => appLower.contains(app))) {
+      actions.add(SuggestedAction(
+          id: '1',
+          title: 'Reply to Message',
+          icon: Icons.reply,
+          description: 'Open $appName to reply'));
+      actions.add(SuggestedAction(
+          id: '2',
+          title: 'Mark as Read',
+          icon: Icons.mark_chat_read,
+          description: 'Mark message as read'));
+    } else if (['instagram', 'facebook', 'snapchat']
+        .any((app) => appLower.contains(app))) {
+      actions.add(SuggestedAction(
+          id: '1',
+          title: 'View in App',
+          icon: Icons.open_in_new,
+          description: 'Open $appName'));
+      actions.add(SuggestedAction(
+          id: '2',
+          title: 'Like/React',
+          icon: Icons.favorite,
+          description: 'React to content'));
+    } else if (['gpay', 'phonepe', 'paytm']
+        .any((app) => appLower.contains(app))) {
+      actions.add(SuggestedAction(
+          id: '1',
+          title: 'Open Payment App',
+          icon: Icons.payment,
+          description: 'Open $appName'));
+      actions.add(SuggestedAction(
+          id: '2',
+          title: 'View Transaction',
+          icon: Icons.receipt,
+          description: 'Check transaction details'));
+    } else if (['gmail', 'outlook', 'email']
+        .any((app) => appLower.contains(app))) {
+      actions.add(SuggestedAction(
+          id: '1',
+          title: 'Read Email',
+          icon: Icons.email,
+          description: 'Open email'));
+      actions.add(SuggestedAction(
+          id: '2',
+          title: 'Reply',
+          icon: Icons.reply,
+          description: 'Reply to email'));
+    }
+
+    // Default actions
+    if (actions.isEmpty) {
+      actions.add(SuggestedAction(
+          id: '1',
+          title: 'Open App',
+          icon: Icons.open_in_new,
+          description: 'Open $appName'));
+    }
+
+    return actions;
   }
 }

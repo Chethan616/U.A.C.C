@@ -95,6 +95,16 @@ class CallLogService {
     }
   }
 
+  /// Make a phone call
+  static Future<void> makeCall(String phoneNumber) async {
+    try {
+      await _channel.invokeMethod('makeCall', {'phoneNumber': phoneNumber});
+    } catch (e) {
+      print('Error making call: $e');
+      rethrow;
+    }
+  }
+
   static CallType _parseCallType(dynamic type) {
     switch (type?.toString().toLowerCase()) {
       case 'incoming':

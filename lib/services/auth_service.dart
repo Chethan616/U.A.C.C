@@ -83,8 +83,14 @@ class AuthService {
   }
 
   // Sign in with Google
-  Future<UserCredential?> signInWithGoogle() async {
+  Future<UserCredential?> signInWithGoogle(
+      {bool forceAccountPicker = false}) async {
     try {
+      // If forcing account picker or no current user, sign out first to show picker
+      if (forceAccountPicker || _googleSignIn.currentUser != null) {
+        await _googleSignIn.signOut();
+      }
+
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
@@ -143,16 +149,55 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     try {
-      await Future.wait([
-        _auth.signOut(),
-        _googleSignIn.signOut(),
-      ]);
-
-      // Clear user state
+      // First clear the user state
       await AppStateService.instance.clearUserState();
+
+      // Sign out from Firebase Auth
+      await _auth.signOut();
+
+      // Disconnect from Google completely (this clears the account picker cache)
+      await _googleSignIn.disconnect();
+
+      if (kDebugMode) {
+        print('Successfully signed out and cleared all auth state');
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Sign out error: $e');
+      }
+      // Try to clear state even if sign out fails
+      try {
+        await AppStateService.instance.clearUserState();
+      } catch (clearError) {
+        if (kDebugMode) {
+          print('Error clearing state: $clearError');
+        }
+      }
+      throw Exception('Failed to sign out. Please try again.');
+    }
+  }
+
+  // Sign out and disconnect completely (forces account picker on next Google sign in)
+  Future<void> signOutWithAccountSwitch() async {
+    try {
+      // Clear all app state first
+      await AppStateService.instance.clearAllState();
+
+      // Sign out from Firebase Auth
+      await _auth.signOut();
+
+      // Disconnect from Google completely to clear account selection
+      await _googleSignIn.disconnect();
+
+      // Clear any cached Google Sign In data
+      await _googleSignIn.signOut();
+
+      if (kDebugMode) {
+        print('Successfully signed out with account switch capability');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Sign out with account switch error: $e');
       }
       throw Exception('Failed to sign out. Please try again.');
     }
