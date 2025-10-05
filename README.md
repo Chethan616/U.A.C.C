@@ -1,5 +1,7 @@
 ## PLEASE FOLLOW SETUP.MD AND GOOGLE_WORKSPACE_SEUP.MD AND THIS FILE AND ALSO REQUIREMENTS.TXT
+# Web - https://github.com/jayashish05/UACC
 
+# Android
 # U.A.C.C (Cairo)
 ## Unified AI Communication Companion  
 *Revolutionizing mobile communication with on‑device + Firebase intelligence – Samsung PRISM project*
